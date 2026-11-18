@@ -1,0 +1,9 @@
+{
+  "name": "SkillHub",
+  "tagline": "Skills for every agent",
+  "logo": "/logo.svg",
+  "favicon": "/favicon.svg",
+  "primary": "#2563eb",
+  "footer": "",
+  "supportEmail": ""
+}

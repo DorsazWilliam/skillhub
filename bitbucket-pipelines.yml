@@ -1,0 +1,33 @@
+image: node:24
+
+definitions:
+  caches:
+    npm: ~/.npm
+  steps:
+    - step: &test
+        name: Typecheck, parity, test
+        caches: [npm]
+        script:
+          - npm ci
+          - npm run typecheck
+          - node scripts/check-parity.mjs
+          - npm run build
+          - npm test
+
+pipelines:
+  pull-requests:
+    '**':
+      - step: *test
+  branches:
+    main:
+      - step: *test
+      - step:
+          name: Migrate and deploy
+          deployment: production
+          caches: [npm]
+          # Repository variables: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID (secured)
+          script:
+            - npm ci
+            - npm run build
+            - npx wrangler d1 migrations apply DB --remote
+            - npx wrangler deploy

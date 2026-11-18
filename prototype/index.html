@@ -1,0 +1,1296 @@
+<title>SkillHub Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: icon rail | lazy tree | reading column | details drawer. Quiet neutrals with a faint blue bias, one accent. */
+:root{
+  --bg:#f6f7f9;--panel:#ffffff;--sunken:#f1f3f6;--hover:#eceff4;--border:#e3e6eb;--border-2:#d2d7df;
+  --fg:#0f172a;--fg-2:#334155;--muted:#64748b;--faint:#97a1b2;
+  --accent:#2563eb;--accent-2:#1d4ed8;--accent-soft:#e8f0fe;--accent-fg:#ffffff;
+  --ok:#15803d;--ok-soft:#e6f5eb;--warn:#b45309;--warn-dot:#f59e0b;--warn-soft:#fdf2e0;--danger:#dc2626;--danger-soft:#fdeceb;
+  --add:#e7f6eb;--add-fg:#166534;--del:#fdeceb;--del-fg:#991b1b;
+  --shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px rgba(15,23,42,.08);
+  --shadow-lg:0 2px 6px rgba(15,23,42,.06),0 24px 56px rgba(15,23,42,.18);
+  --scrim:rgba(15,23,42,.28);--av-bg:91%;--av-fg:32%;--tip-bg:#0f172a;--tip-fg:#f8fafc;--mark:#fde68a;--mark-fg:#0f172a;
+  --font:'Geist','Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a0c10;--panel:#0f1217;--sunken:#151920;--hover:#1a1f28;--border:#20262f;--border-2:#2d3440;
+  --fg:#e6e9ef;--fg-2:#c3c9d3;--muted:#8b94a3;--faint:#5c6575;
+  --accent:#4b8af5;--accent-2:#6d9ff7;--accent-soft:rgba(75,138,245,.15);--accent-fg:#ffffff;
+  --ok:#43b56d;--ok-soft:rgba(67,181,109,.14);--warn:#e5a143;--warn-dot:#e5a143;--warn-soft:rgba(229,161,67,.14);--danger:#f2615b;--danger-soft:rgba(242,97,91,.14);
+  --add:rgba(67,181,109,.13);--add-fg:#7fd9a0;--del:rgba(242,97,91,.13);--del-fg:#f6a19c;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);--shadow-lg:0 2px 6px rgba(0,0,0,.4),0 24px 56px rgba(0,0,0,.55);
+  --scrim:rgba(0,0,0,.55);--av-bg:24%;--av-fg:80%;--tip-bg:#e6e9ef;--tip-fg:#0a0c10;--mark:rgba(229,161,67,.35);--mark-fg:#fff;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a0c10;--panel:#0f1217;--sunken:#151920;--hover:#1a1f28;--border:#20262f;--border-2:#2d3440;
+  --fg:#e6e9ef;--fg-2:#c3c9d3;--muted:#8b94a3;--faint:#5c6575;
+  --accent:#4b8af5;--accent-2:#6d9ff7;--accent-soft:rgba(75,138,245,.15);--accent-fg:#ffffff;
+  --ok:#43b56d;--ok-soft:rgba(67,181,109,.14);--warn:#e5a143;--warn-dot:#e5a143;--warn-soft:rgba(229,161,67,.14);--danger:#f2615b;--danger-soft:rgba(242,97,91,.14);
+  --add:rgba(67,181,109,.13);--add-fg:#7fd9a0;--del:rgba(242,97,91,.13);--del-fg:#f6a19c;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);--shadow-lg:0 2px 6px rgba(0,0,0,.4),0 24px 56px rgba(0,0,0,.55);
+  --scrim:rgba(0,0,0,.55);--av-bg:24%;--av-fg:80%;--tip-bg:#e6e9ef;--tip-fg:#0a0c10;--mark:rgba(229,161,67,.35);--mark-fg:#fff;color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.i{flex:none;display:block}
+#root{height:100%}
+code,kbd,.mono{font-family:var(--mono)}
+kbd{font-size:11px;padding:1px 5px;border:1px solid var(--border-2);border-bottom-width:2px;border-radius:5px;color:var(--muted);background:var(--panel)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* controls */
+.ib{width:32px;height:32px;display:inline-grid;place-items:center;border-radius:8px;color:var(--muted);transition:background .12s,color .12s}
+.ib:hover{background:var(--hover);color:var(--fg)}
+.ib.on{color:var(--accent);background:var(--accent-soft)}
+.ib.sm{width:28px;height:28px}.ib.xs{width:24px;height:24px;border-radius:6px}
+.ib:disabled{opacity:.35;pointer-events:none}
+.ib.armed,.btn.armed{background:var(--danger)!important;color:#fff!important;width:auto;padding:0 10px;gap:6px;display:inline-flex;align-items:center;font-size:12.5px;font-weight:500}
+.btn{height:32px;display:inline-flex;align-items:center;gap:7px;padding:0 12px;border-radius:8px;border:1px solid var(--border-2);background:var(--panel);font-weight:500;font-size:13px;white-space:nowrap;transition:background .12s,border-color .12s,opacity .12s}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn.danger{color:var(--danger)}
+.btn.ghost{border-color:transparent;background:none}
+.btn.ghost:hover{background:var(--hover)}
+.btn:disabled{opacity:.45;pointer-events:none}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px}
+.input,.select{height:34px;border:1px solid var(--border-2);background:var(--panel);border-radius:8px;padding:0 10px;min-width:0;transition:border-color .12s,box-shadow .12s}
+.input:focus,.select:focus,textarea.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.input{height:auto;padding:8px 10px;resize:vertical;line-height:1.5}
+.select{appearance:none;padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 14px) 50%,calc(100% - 10px) 50%;background-size:4px 4px;background-repeat:no-repeat}
+.select.bare{border-color:transparent;background-color:transparent;height:30px;font-size:13px;color:var(--fg-2)}
+.select.bare:hover{background-color:var(--hover)}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;background:var(--sunken);color:var(--fg-2);font-size:12px;font-weight:500;white-space:nowrap}
+.chip.acc{background:var(--accent-soft);color:var(--accent)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--danger-soft);color:var(--danger)}
+.switch{position:relative;width:34px;height:20px;flex:none}
+.switch input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:1}
+.switch span{position:absolute;inset:0;border-radius:999px;background:var(--border-2);transition:background .15s}
+.switch span::after{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span::after{transform:translateX(14px)}
+.switch input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.cb{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;margin:0}
+.av{--s:24px;width:var(--s);height:var(--s);border-radius:50%;display:inline-grid;place-items:center;flex:none;font-size:calc(var(--s)*.4);font-weight:600;letter-spacing:.02em;background:hsl(var(--h) 55% var(--av-bg));color:hsl(var(--h) 45% var(--av-fg))}
+.av.sq{border-radius:calc(var(--s)*.28)}
+.av.ev{background:var(--accent-soft);color:var(--accent)}
+.av.cl{background:var(--sunken);color:var(--fg-2);border:1px solid var(--border)}
+.stack{display:inline-flex}.stack .av{box-shadow:0 0 0 2px var(--panel)}.stack .av+.av{margin-left:-6px}
+.muted{color:var(--muted)}.faint{color:var(--faint)}
+.row-flex{display:flex;align-items:center;gap:8px;min-width:0}
+.grow{flex:1;min-width:0}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sep{width:1px;height:18px;background:var(--border);margin:0 4px;flex:none}
+
+/* shell */
+.shell{display:grid;height:100%;grid-template-rows:52px minmax(0,1fr);grid-template-columns:56px 272px minmax(0,1fr) 0;grid-template-areas:"top top top top" "rail tree main drawer";transition:grid-template-columns .2s ease}
+.shell.with-drawer{grid-template-columns:56px 272px minmax(0,1fr) 352px}
+.shell.page-mode{grid-template-columns:56px 0 minmax(0,1fr) 0}
+.shell:not(.with-drawer) .drawer,.shell.page-mode .drawer,.shell.page-mode .tree{display:none}
+.top{grid-area:top;display:flex;align-items:center;gap:12px;padding:0 12px 0 14px;border-bottom:1px solid var(--border);background:var(--panel);min-width:0}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em;font-size:14.5px;flex:none;width:300px}
+.logo{width:26px;height:26px;border-radius:7px;background:var(--accent);color:#fff;display:grid;place-items:center;flex:none}
+.brand .org{color:var(--faint);font-weight:500}
+.search{position:relative;flex:1;max-width:560px;min-width:0}
+.search .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none}
+.search input{width:100%;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--sunken);padding:0 34px 0 34px;transition:background .12s,border-color .12s,box-shadow .12s}
+.search input:focus{outline:none;background:var(--panel);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search kbd{position:absolute;right:9px;top:50%;transform:translateY(-50%)}
+.top .right{margin-left:auto;display:flex;align-items:center;gap:4px}
+.mbtn{display:none}
+.rail{grid-area:rail;border-right:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0}
+.rail .ib{width:38px;height:38px;border-radius:10px}
+.rail .sp{flex:1}
+.tree{grid-area:tree;border-right:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.tree-head{display:flex;align-items:center;gap:2px;padding:12px 10px 6px 16px;flex:none}
+.tree-head .lbl{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);flex:1}
+.tree-body{flex:1;overflow:auto;padding:2px 8px 12px}
+.tree-foot{border-top:1px solid var(--border);padding:6px 8px;display:flex;gap:2px}
+.row{--d:0;display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 calc(6px + var(--d)*16px);border-radius:7px;cursor:pointer;user-select:none;color:var(--fg-2);position:relative}
+.row:hover{background:var(--hover)}
+.row.sel{background:var(--accent-soft);color:var(--fg)}
+.row.sel .ri{color:var(--accent)}
+.row .tw{width:16px;height:16px;display:grid;place-items:center;color:var(--faint);transition:transform .15s;flex:none;border-radius:4px}
+.row .tw:hover{color:var(--fg)}
+.row .tw.open{transform:rotate(90deg)}
+.row .ri{color:var(--faint)}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px}
+.row .lk{color:var(--faint);display:grid}
+.row .more{opacity:0}
+.row:hover .more,.row.sel .more{opacity:1}
+.row.drop{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.row.dragging{opacity:.4}
+.row input{flex:1;min-width:0;height:24px;border:1px solid var(--accent);border-radius:5px;padding:0 6px;background:var(--panel);font-size:13px;outline:none}
+.mk{width:16px;height:16px;display:grid;place-items:center;flex:none}
+.mk::before{content:"";width:7px;height:7px;border-radius:50%}
+.mk.dot::before{background:var(--accent)}
+.mk.amber::before{background:var(--warn-dot)}
+.mk.ring::before{border:1.5px solid var(--faint);width:5px;height:5px}
+.mk.ok::before{display:none}.mk.ok{color:var(--ok)}
+.empty-row{padding:4px 0 4px calc(30px + var(--d)*16px);font-size:12px;color:var(--faint);height:26px;display:flex;align-items:center}
+.main{grid-area:main;overflow:auto;min-width:0;background:var(--panel);position:relative}
+.drawer{grid-area:drawer;border-left:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;min-height:0;min-width:0}
+.dtabs{display:flex;align-items:center;gap:2px;padding:10px 10px 10px 12px;border-bottom:1px solid var(--border);flex:none}
+.dtabs .t{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;color:var(--muted);font-size:13px;font-weight:500}
+.dtabs .t:hover{background:var(--hover);color:var(--fg)}
+.dtabs .t.on{background:var(--sunken);color:var(--fg)}
+.dtabs .t span{display:none}.dtabs .t.on span{display:inline}
+.drawer-body{flex:1;overflow:auto;padding:12px}
+.scrim{display:none}
+
+/* page */
+.page{max-width:820px;margin:0 auto;padding:18px 32px 96px}
+.page.wide{max-width:1120px}
+.dh{display:flex;align-items:center;gap:8px;min-height:36px;position:sticky;top:0;background:var(--panel);z-index:5;padding:8px 0;margin:-8px 0 8px}
+.crumbs{display:flex;align-items:center;gap:2px;min-width:0;flex:1;font-size:13px;color:var(--muted);overflow:hidden}
+.crumbs button{padding:3px 6px;border-radius:6px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.crumbs button:hover{background:var(--hover);color:var(--fg)}
+.crumbs .cur{color:var(--fg);font-weight:500;padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;gap:6px}
+.crumbs .i{color:var(--faint)}
+.acts{display:flex;align-items:center;gap:2px;flex:none}
+.pill-btn{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 6px 0 4px;border-radius:8px;border:1px solid var(--border);margin-right:6px;color:var(--muted);transition:background .12s}
+.pill-btn:hover{background:var(--hover)}
+.pp{display:inline-flex;align-items:center;gap:3px;height:20px;padding:0 6px;border-radius:6px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.pp.ok{background:var(--ok-soft);color:var(--ok)}
+.pp.warn{background:var(--warn-soft);color:var(--warn)}
+.pp.mute{background:var(--sunken);color:var(--muted)}
+.pp.dot{width:8px;height:8px;padding:0;border-radius:50%;background:var(--accent);margin:0 3px}
+.banner{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 12px;border-radius:10px;background:var(--sunken);margin:4px 0 18px;font-size:13px;color:var(--fg-2)}
+.banner.draft{background:var(--accent-soft)}
+.banner.old{background:var(--warn-soft)}
+.banner .grow{display:flex;align-items:center;gap:8px;min-width:0}
+.banner b{font-weight:600}
+.skill-card{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:12px;margin:6px 0 22px;background:var(--bg)}
+.skill-card .sk{color:var(--accent);margin-top:2px}
+.skill-card code{font-size:12px;color:var(--muted)}
+.skill-card p{margin:2px 0 0;color:var(--fg-2);font-size:14px;line-height:1.5}
+
+/* markdown */
+.md{font-size:15px;line-height:1.7;color:var(--fg-2);max-width:68ch;overflow-wrap:break-word}
+.md>*:first-child{margin-top:0}
+.md h1{font-size:30px;line-height:1.2;letter-spacing:-.02em;color:var(--fg);margin:8px 0 18px;font-weight:650;text-wrap:balance}
+.md h2{font-size:19px;color:var(--fg);margin:30px 0 10px;font-weight:600;letter-spacing:-.01em}
+.md h3{font-size:16px;color:var(--fg);margin:22px 0 8px;font-weight:600}
+.md p{margin:0 0 14px}
+.md ul,.md ol{margin:0 0 14px;padding-left:22px}
+.md li{margin:3px 0}
+.md li::marker{color:var(--faint)}
+.md code{font-size:.86em;background:var(--sunken);border:1px solid var(--border);padding:1px 5px;border-radius:5px;color:var(--fg)}
+.md pre{background:var(--sunken);border:1px solid var(--border);border-radius:10px;padding:12px 14px;overflow:auto;font-size:13px;line-height:1.55}
+.md pre code{background:none;border:0;padding:0}
+.md blockquote{margin:0 0 14px;padding:2px 0 2px 14px;border-left:3px solid var(--border-2);color:var(--muted)}
+.md hr{border:0;border-top:1px solid var(--border);margin:24px 0}
+.md a{color:var(--accent);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.md a:hover{border-bottom-color:var(--accent)}
+.md a.int{display:inline-flex;align-items:center;gap:3px;border:0;background:var(--accent-soft);padding:0 6px;border-radius:6px;font-size:.93em;cursor:pointer}
+.md .tbl{overflow-x:auto;margin:0 0 16px;border:1px solid var(--border);border-radius:10px}
+.md table{border-collapse:collapse;width:100%;font-size:13.5px}
+.md th,.md td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--border)}
+.md th{font-weight:600;color:var(--fg);background:var(--bg)}
+.md tr:last-child td{border-bottom:0}
+.md figure{margin:6px 0 18px}
+.md figure img{border-radius:10px;border:1px solid var(--border);display:block;max-width:100%}
+.md figcaption{font-size:12px;color:var(--faint);margin-top:6px}
+.md .ph{height:120px;border-radius:10px;border:1px dashed var(--border-2);display:grid;place-items:center;color:var(--faint)}
+.md mark{background:var(--mark);color:var(--mark-fg);border-radius:3px;padding:0 1px}
+
+/* editor */
+.fm-card{border:1px solid var(--border);border-radius:12px;padding:12px 14px 10px;margin:4px 0 12px;background:var(--bg);transition:border-color .12s}
+.fm-card:focus-within{border-color:var(--accent)}
+.fm-row{display:flex;align-items:center;gap:10px;color:var(--accent)}
+.fm-name{flex:1;border:0;background:none;font-family:var(--mono);font-size:14px;color:var(--fg);outline:none;padding:2px 0;min-width:0}
+.fm-desc{width:100%;border:0;background:none;resize:none;outline:none;color:var(--fg-2);font-size:14px;line-height:1.5;padding:4px 0 0 26px;field-sizing:content;min-height:24px}
+.fm-err{font-size:12px;color:var(--danger);padding-left:26px;min-height:0}
+.fm-err:empty{display:none}
+.fm-name::placeholder,.fm-desc::placeholder{color:var(--faint)}
+.fmt{display:flex;align-items:center;gap:2px;padding:4px;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;position:sticky;top:52px;background:var(--panel);z-index:4;flex-wrap:wrap}
+.fmt .grow{flex:1}
+.editable{outline:none;min-height:50vh;padding-bottom:30vh}
+.editable:empty::before{content:attr(data-ph);color:var(--faint)}
+.editable figure,.editable .tbl{position:relative}
+.editable figure:hover,.editable .tbl:hover{outline:2px solid var(--accent-soft);border-radius:10px}
+.raw{width:100%;min-height:60vh;border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-family:var(--mono);font-size:13px;line-height:1.65;background:var(--bg);resize:vertical;outline:none;field-sizing:content;color:var(--fg)}
+.raw:focus{border-color:var(--accent)}
+.save{width:28px;height:28px;display:grid;place-items:center;color:var(--faint)}
+.save.ok{color:var(--ok)}
+.spin{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* folder list */
+.fhead{display:flex;align-items:center;gap:12px;margin:10px 0 18px}
+.fhead h1{font-size:26px;letter-spacing:-.02em;margin:0;font-weight:650}
+.fhead .fic{width:40px;height:40px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none}
+.items{border-top:1px solid var(--border)}
+.item{display:grid;grid-template-columns:20px minmax(0,1fr) auto 48px 56px 24px;align-items:center;gap:12px;padding:10px 8px;border-bottom:1px solid var(--border);cursor:pointer;border-radius:0;transition:background .1s}
+.item:hover{background:var(--bg)}
+.item .t{font-weight:500;color:var(--fg)}
+.item .d{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .v,.item .w{font-size:12px;color:var(--faint);text-align:right;font-variant-numeric:tabular-nums}
+.empty{display:grid;place-items:center;gap:10px;padding:60px 0;color:var(--faint);text-align:center}
+.empty .eic{width:52px;height:52px;border-radius:14px;background:var(--sunken);display:grid;place-items:center}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.tile{border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;text-align:left;transition:border-color .12s,box-shadow .12s;background:var(--panel)}
+.tile:hover{border-color:var(--border-2);box-shadow:var(--shadow)}
+.tile .fic{width:34px;height:34px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.tile b{font-weight:600}
+
+/* drawer content */
+.hrow{display:flex;align-items:flex-start;gap:10px;padding:9px 8px;border-radius:9px;cursor:pointer;width:100%;text-align:left;position:relative}
+.hrow:hover{background:var(--hover)}
+.hrow.cur{background:var(--accent-soft)}
+.vn{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--fg-2);width:30px;height:22px;border-radius:6px;background:var(--sunken);display:grid;place-items:center;flex:none}
+.hrow.cur .vn{background:var(--panel);color:var(--accent)}
+.vn.dr{background:var(--accent);color:#fff}
+.hmain{flex:1;min-width:0}
+.ht{font-size:13px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;margin-top:2px}
+.hact{display:flex;gap:0;opacity:0;transition:opacity .12s}
+.hrow:hover .hact{opacity:1}
+.hb{display:flex;align-items:center}
+.sec{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin:14px 8px 6px}
+.sec:first-child{margin-top:2px}
+.prow{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:9px}
+.prow .pn{font-size:13px;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow .ps{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow.inh .pn,.prow.inh .ps,.prow.inh .rl{color:var(--faint)}
+.prow.inh .av{opacity:.6}
+.rl{font-size:12.5px;color:var(--fg-2);white-space:nowrap}
+.arow{display:flex;gap:10px;padding:8px;align-items:center;border-radius:9px}
+.arow .aic{width:28px;height:28px;border-radius:8px;background:var(--sunken);color:var(--muted);display:grid;place-items:center;flex:none}
+.arow .aic.ok{color:var(--ok);background:var(--ok-soft)}
+.arow .aic.bad{color:var(--danger);background:var(--danger-soft)}
+.arow .aic.acc{color:var(--accent);background:var(--accent-soft)}
+.note{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--warn-soft);color:var(--warn);font-size:12.5px;margin:6px 0}
+
+/* menus, modals */
+.menu{position:fixed;z-index:60;min-width:200px;max-width:320px;background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:5px;animation:pop .12s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(-4px) scale(.98)}}
+.mi{display:flex;align-items:center;gap:10px;width:100%;padding:7px 9px;border-radius:7px;font-size:13px;color:var(--fg-2);text-align:left}
+.mi:hover{background:var(--hover);color:var(--fg)}
+.mi .i{color:var(--muted)}
+.mi.dz,.mi.dz .i{color:var(--danger)}
+.mi.on{background:var(--accent-soft);color:var(--fg)}
+.mi .r{margin-left:auto;color:var(--faint);font-size:12px}
+.mhr{height:1px;background:var(--border);margin:5px 3px}
+.mlbl{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);padding:8px 9px 4px}
+.modal-wrap{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-start;justify-content:center;padding:10vh 16px 16px}
+.modal-scrim{position:absolute;inset:0;background:var(--scrim);animation:fade .15s}
+@keyframes fade{from{opacity:0}}
+.modal{position:relative;background:var(--panel);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-lg);width:100%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;animation:rise .18s cubic-bezier(.2,.9,.3,1.2)}
+.modal.lg{max-width:760px}.modal.sm{max-width:420px}
+@keyframes rise{from{opacity:0;transform:translateY(8px) scale(.985)}}
+.mh{display:flex;align-items:center;gap:10px;padding:14px 14px 10px 18px}
+.mh h2{margin:0;font-size:15px;font-weight:600;flex:1;display:flex;align-items:center;gap:8px;min-width:0}
+.mh h2 .i{color:var(--muted)}
+.modal-body{padding:4px 18px 14px;overflow:auto}
+.mf{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--border)}
+.mf .grow{flex:1}
+.addrow{display:flex;gap:8px;position:relative}
+.addrow .input{flex:1}
+.sugg{position:absolute;top:38px;left:0;right:0;z-index:5;background:var(--panel);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:4px;max-height:240px;overflow:auto}
+.picked{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 6px 0 4px;border:1px solid var(--accent);border-radius:8px;background:var(--accent-soft);flex:1;min-width:0}
+.diff{font-family:var(--mono);font-size:12.5px;line-height:1.6;border:1px solid var(--border);border-radius:10px;overflow:auto;background:var(--panel)}
+.diff table{border-collapse:collapse;width:100%}
+.diff td{padding:0 10px;white-space:pre-wrap;word-break:break-word;vertical-align:top}
+.diff td.n{width:1%;white-space:nowrap;color:var(--faint);text-align:right;user-select:none;padding:0 6px;font-size:11.5px}
+.diff tr.a{background:var(--add)}.diff tr.a td.c{color:var(--add-fg)}
+.diff tr.d{background:var(--del)}.diff tr.d td.c{color:var(--del-fg)}
+.diff tr.g td{background:var(--sunken);color:var(--faint);text-align:center;font-size:11.5px;padding:2px}
+.diff .sg{display:inline-block;width:12px;color:inherit;opacity:.7}
+.stat{font-family:var(--mono);font-size:12px;display:inline-flex;gap:8px}
+.stat .p{color:var(--ok)}.stat .m{color:var(--danger)}
+.vchips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.vchip{height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--border);display:inline-flex;align-items:center;gap:6px;font-size:13px;font-family:var(--mono)}
+.vchip:hover{background:var(--hover)}
+.vchip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.vchip .i{color:var(--ok)}
+.tokbox{display:flex;align-items:center;gap:8px;padding:10px 10px 10px 12px;border-radius:10px;background:var(--sunken);font-family:var(--mono);font-size:13px;word-break:break-all;border:1px solid var(--border)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field>label{font-size:12px;font-weight:500;color:var(--muted)}
+.scopes{display:flex;flex-direction:column;gap:2px}
+.scope{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:10px;cursor:pointer}
+.scope:hover{background:var(--hover)}
+.scope .sic{width:30px;height:30px;border-radius:8px;background:var(--sunken);display:grid;place-items:center;color:var(--muted);flex:none}
+.scope.on .sic{background:var(--accent-soft);color:var(--accent)}
+.scope.dis{opacity:.5;cursor:not-allowed}
+.scope .st{font-weight:500;font-size:13.5px}.scope .sd{font-size:12px;color:var(--muted)}
+.pal{max-width:600px}
+.pal-in{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+.pal-in input{flex:1;border:0;background:none;outline:none;font-size:15px}
+.pal-list{max-height:52vh;overflow:auto;padding:6px}
+.pi{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:8px;text-align:left}
+.pi.on{background:var(--accent-soft)}
+.pi .i{color:var(--muted)}
+.pi .ps{margin-left:auto;font-size:12px;color:var(--faint);max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pi mark,.sr mark{background:none;color:var(--accent);font-weight:600}
+.sres{position:absolute;top:40px;left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:6px;z-index:40;max-height:70vh;overflow:auto;animation:pop .12s ease-out}
+.sr{display:flex;gap:10px;padding:9px 10px;border-radius:9px;width:100%;text-align:left;align-items:flex-start}
+.sr.on,.sr:hover{background:var(--hover)}
+.sr .sk{color:var(--accent);margin-top:2px}
+.sr .st{font-weight:500;font-family:var(--mono);font-size:13px}
+.sr .sd{font-size:12.5px;color:var(--muted);margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sr .sp{font-size:11.5px;color:var(--faint);margin-top:3px}
+.sr .sd mark,.sr .sp mark{background:var(--mark);color:var(--mark-fg);font-weight:500;border-radius:3px;padding:0 1px}
+
+/* tables */
+.ph1{display:flex;align-items:center;gap:12px;margin:8px 0 18px;flex-wrap:wrap}
+.ph1 h1{font-size:24px;letter-spacing:-.02em;margin:0;font-weight:650;display:flex;align-items:center;gap:10px}
+.ph1 .count{font-size:13px;color:var(--faint);font-weight:500;font-variant-numeric:tabular-nums}
+.ph1 .grow{flex:1}
+.bar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.qwrap{position:relative;flex:1;min-width:180px;max-width:320px}
+.qwrap .i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint)}
+.qwrap .input{width:100%;padding-left:32px}
+.tw-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:9px 12px;background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+table.t td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.t tr:last-child td{border-bottom:0}
+table.t tbody tr:hover td{background:var(--bg)}
+table.t tr.selr td{background:var(--accent-soft)}
+table.t .num{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.bulk{display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;border-radius:10px;background:var(--fg);color:var(--panel);margin-bottom:12px;animation:pop .12s}
+.bulk .btn{background:transparent;border-color:color-mix(in srgb,var(--panel) 25%,transparent);color:var(--panel)}
+.bulk .btn:hover{background:color-mix(in srgb,var(--panel) 12%,transparent)}
+.bulk .grow{font-size:13px;font-weight:500}
+.seg{display:inline-flex;padding:2px;border-radius:9px;background:var(--sunken);gap:2px}
+.seg button{height:28px;min-width:30px;padding:0 8px;border-radius:7px;display:inline-grid;place-items:center;color:var(--muted);font-size:12.5px}
+.seg button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tabs button{height:38px;padding:0 12px;display:inline-flex;align-items:center;gap:7px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;font-size:13px}
+.tabs button.on{color:var(--fg);border-bottom-color:var(--accent)}
+.tabs .cnt{font-size:11.5px;background:var(--sunken);border-radius:999px;padding:0 6px;color:var(--muted)}
+.card{border:1px solid var(--border);border-radius:14px;padding:16px;background:var(--panel)}
+.connect{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid var(--border);border-radius:14px;background:var(--bg);margin-bottom:22px;flex-wrap:wrap}
+.connect .cic{width:40px;height:40px;border-radius:11px;background:var(--accent);color:#fff;display:grid;place-items:center;flex:none}
+.urlbox{display:flex;align-items:center;gap:6px;height:36px;padding:0 4px 0 12px;border:1px solid var(--border-2);border-radius:9px;background:var(--panel);font-family:var(--mono);font-size:13px;flex:1;min-width:220px}
+.urlbox span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clients{display:flex;gap:6px}
+.stat-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.stat-dot.on{background:var(--ok)}.stat-dot.off{background:var(--danger)}
+.danger-zone{border:1px solid color-mix(in srgb,var(--danger) 35%,var(--border));border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-top:20px}
+
+/* screens */
+.screen{height:100%;display:grid;place-items:center;padding:24px 16px;overflow:auto;background:radial-gradient(1200px 600px at 50% -10%,var(--accent-soft),transparent 60%),var(--bg)}
+.login{width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center}
+.login .logo{width:52px;height:52px;border-radius:14px}
+.login h1{margin:0;font-size:24px;letter-spacing:-.02em;font-weight:650}
+.login .sub{color:var(--muted);margin-top:4px}
+.ms{height:44px;width:100%;display:flex;align-items:center;justify-content:center;gap:12px;border-radius:10px;border:1px solid var(--border-2);background:var(--panel);font-weight:600;font-size:14px;box-shadow:var(--shadow);transition:transform .1s,box-shadow .12s}
+.ms:hover{box-shadow:var(--shadow-lg)}
+.ms:active{transform:translateY(1px)}
+.consent{width:100%;max-width:440px;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow-lg);padding:26px 22px 18px}
+.c-top{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:18px;color:var(--faint)}
+.c-top .ap{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-weight:700;font-size:18px}
+.consent h1{font-size:18px;text-align:center;margin:0 0 4px;font-weight:600;letter-spacing:-.01em}
+.consent .who{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;margin:16px 0 10px}
+.consent .redir{display:flex;align-items:center;gap:6px;justify-content:center;font-size:12px;color:var(--faint);margin:12px 0 2px}
+
+/* tooltip, toast */
+#tip{position:fixed;z-index:100;pointer-events:none;background:var(--tip-bg);color:var(--tip-fg);font-size:12px;font-weight:500;padding:5px 8px;border-radius:7px;opacity:0;transform:translateY(2px);transition:opacity .1s,transform .1s;white-space:nowrap;display:flex;gap:8px;align-items:center;max-width:320px}
+#tip.on{opacity:1;transform:none}
+#tip kbd{background:transparent;color:inherit;opacity:.7;border-color:currentColor;border-bottom-width:1px}
+#toasts{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:10px;padding:9px 10px 9px 14px;border-radius:12px;background:var(--fg);color:var(--panel);box-shadow:var(--shadow-lg);font-size:13px;font-weight:500;opacity:0;transform:translateY(8px) scale(.98);transition:opacity .2s,transform .2s;max-width:100%}
+.toast.in{opacity:1;transform:none}
+.toast .tsub{opacity:.65;font-weight:400}
+.toast .tw2{color:var(--warn-dot)}
+.tbtn{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:7px;background:color-mix(in srgb,var(--panel) 16%,transparent);color:var(--panel);font-weight:600;font-size:12.5px}
+.tbtn:hover{background:color-mix(in srgb,var(--panel) 26%,transparent)}
+.toast.bad{background:var(--danger);color:#fff}
+
+/* phone */
+@media (max-width:860px){
+  .shell,.shell.with-drawer,.shell.page-mode{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "main"}
+  .rail{display:none}
+  .brand{width:auto}.brand .nm,.brand .org{display:none}
+  .mbtn{display:inline-grid}
+  .search kbd{display:none}
+  .top .right .hide-m{display:none}
+  .tree{position:fixed;left:0;top:52px;bottom:0;width:min(86vw,320px);z-index:50;transform:translateX(-102%);transition:transform .22s ease;display:flex!important;box-shadow:var(--shadow-lg)}
+  .shell.m-tree .tree{transform:none}
+  .drawer{position:fixed;right:0;top:52px;bottom:0;width:min(100vw,400px);z-index:50;box-shadow:var(--shadow-lg)}
+  .shell.page-mode .tree{transform:translateX(-102%)}
+  .scrim{display:block;position:fixed;inset:52px 0 0;background:var(--scrim);z-index:45;opacity:0;pointer-events:none;transition:opacity .2s}
+  .shell.m-tree .scrim,.shell.with-drawer:not(.page-mode) .scrim{opacity:1;pointer-events:auto}
+  .page{padding:14px 16px 96px}
+  .item{grid-template-columns:20px minmax(0,1fr) auto 24px}
+  .item .v,.item .w{display:none}
+  .dh .acts .hide-m{display:none}
+  .modal-wrap{padding:16px;align-items:flex-end}
+  .modal{max-height:88vh}
+  .fmt{top:44px}
+}
+</style>
+
+<div id="root"></div>
+<div id="tip" role="tooltip"></div>
+<div id="toasts" aria-live="polite"></div>
+<input type="file" id="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden>
+
+<script type="text/markdown" data-seed="hub-authoring">
+---
+name: hub-authoring
+description: Use when writing or revising a skill in this hub. Covers frontmatter, structure and length.
+---
+# Writing a skill
+
+## Frontmatter
+- `name`: lowercase letters, digits and hyphens. Max 64 characters.
+- `description`: one line that says when to use the skill. Max 1024 characters.
+
+## Body
+- Write instructions, not prose. Start each step with a verb.
+- Keep the body under 150 lines. Move detail into linked documents.
+- Link related documents with relative links, for example [hub-promote](./hub-promote.md).
+- Use images only when a diagram replaces a paragraph.
+
+## Never
+- Put secrets, tokens or customer data in a skill.
+- Copy content you are not allowed to share.
+</script>
+<script type="text/markdown" data-seed="hub-promote">
+---
+name: hub-promote
+description: Use when a draft is ready to go live. Walks through review, commit and publish.
+---
+# Promoting a skill
+
+1. Call `list_versions` and note the published version.
+2. Call `diff_versions` from published to head. Show the diff to the human.
+3. Check the frontmatter: `name` and `description` are present and accurate.
+4. Call `commit_version` with a message that says what changed and why.
+5. Call `publish_version` with the new version number.
+6. Verify with `get_skill` and report the published version.
+
+## Rules
+- Never publish without showing the diff, unless the human says so explicitly.
+- Never publish a document you have not read in full.
+- One skill per publish.
+- Always report the version number you published.
+</script>
+<script type="text/markdown" data-seed="hub-access">
+---
+name: hub-access
+description: Use when someone asks who can see or edit a folder, or wants access changed.
+---
+# Inspecting and changing access
+
+1. Call `effective_access` for the person and folder in question.
+2. Call `list_grants` on the folder to see direct and inherited grants.
+3. To change access, call `grant_access` or `revoke_access`.
+4. To isolate a folder, call `set_inherit` with `false`.
+
+## Rules
+- Confirm with the human before widening access.
+- Prefer granting to a team over granting to a person.
+- Report the resulting effective role after every change.
+</script>
+<script type="text/markdown" data-seed="code-review">
+---
+name: code-review
+description: Use when reviewing a pull request. Checks correctness, tests and risk before style.
+---
+# Code review
+
+## Order
+1. Read the PR description and the linked ticket.
+2. Check correctness: inputs, error paths, concurrency.
+3. Check that tests cover the change, including one failure case.
+4. Check risk: migrations, feature flags, rollback path.
+5. Style last, and only if a linter would not catch it.
+
+## Comments
+- Prefix blocking comments with `blocker:`.
+- Suggest code, do not describe it.
+- Approve when the remaining comments are optional.
+
+## Escalate
+- Anything touching auth, billing or data deletion needs a second reviewer. See [secrets-handling](../Security/secrets-handling.md).
+</script>
+<script type="text/markdown" data-seed="incident-runbook">
+---
+name: incident-runbook
+description: Use when production is degraded or down. Declares severity, assigns roles and drives to resolution.
+---
+# Incident runbook
+
+## Declare
+1. Open a channel named `inc-<date>-<slug>`.
+2. Set severity with the matrix below.
+3. Page the on-call lead for the affected service.
+
+![Severity matrix](asset://a-sev)
+
+| Severity | Customer impact | Update cadence |
+|---|---|---|
+| SEV1 | Outage or data loss | 15 min |
+| SEV2 | Major feature degraded | 30 min |
+| SEV3 | Minor, workaround exists | 2 h |
+
+## Roles
+- **Incident lead** owns decisions and the timeline.
+- **Comms** posts status updates at the cadence above.
+- **Scribe** records every action with a timestamp.
+
+## Resolve
+1. Mitigate first. Roll back before you debug.
+2. Confirm recovery on the service dashboard for 15 minutes.
+3. Close the channel with a one-line summary.
+
+## After
+- Write the postmortem within 3 business days.
+- File follow-ups as tickets with an owner and a date.
+</script>
+<script type="text/markdown" data-seed="onboarding-notes">
+# Onboarding notes
+
+Notes for new engineers. This is a plain document, so agents will not find it through skill search.
+
+- Laptop setup takes about half a day.
+- Ask in the eng-help channel before opening a ticket.
+- Your first pull request should be a docs fix.
+</script>
+<script type="text/markdown" data-seed="sql-review">
+---
+name: sql-review
+description: Use when reviewing SQL for analytics or migrations. Checks correctness, cost and safety.
+---
+# SQL review
+
+## Correctness
+- Every join states its keys. No implicit cross joins.
+- `NULL` handling is explicit in filters and aggregates.
+- Window functions declare `PARTITION BY` and `ORDER BY`.
+
+## Cost
+- Filter on partition columns first.
+- Avoid `SELECT *` outside exploration.
+- Check the query plan for full scans on tables over 10 GB.
+
+## Safety
+- Migrations are additive. Drop columns in a later release.
+- `UPDATE` and `DELETE` run inside a transaction with a row count check.
+
+See [dbt-conventions](./dbt-conventions.md) for model naming.
+</script>
+<script type="text/markdown" data-seed="dbt-conventions">
+---
+name: dbt-conventions
+description: Use when creating or renaming dbt models. Naming, layering and tests.
+---
+# dbt conventions
+
+## Layers
+- `stg_` one model per source table, renames and casts only.
+- `int_` joins and business logic.
+- `fct_` and `dim_` are the only models exposed to BI.
+
+## Tests
+- Every primary key has `unique` and `not_null`.
+</script>
+<script type="text/markdown" data-seed="secrets-handling">
+---
+name: secrets-handling
+description: Use when code, config or a conversation involves credentials. Where secrets live and how to rotate them.
+---
+# Secrets handling
+
+- Secrets live in the vault. Never in code, tickets or chat.
+- Rotate any secret that appears in a log within 1 hour.
+- Use short-lived tokens for CI. Maximum lifetime 1 hour.
+- Report exposure to the security channel with the secret name, never its value.
+</script>
+<script type="text/markdown" data-seed="discovery-call">
+---
+name: discovery-call
+description: Use when preparing for or summarising a first sales call. Questions, qualification and notes format.
+---
+# Discovery call
+
+## Before
+- Read the account in the CRM and the last 3 support tickets.
+- Write down one hypothesis about their main problem.
+
+## Ask
+1. What triggered the search now?
+2. Who else is involved in the decision?
+3. What happens if nothing changes this quarter?
+4. How do you measure success for this project?
+
+## After
+Summarise in the CRM within 24 hours: pain, impact, decision process, next step with a date.
+</script>
+<script type="text/markdown" data-seed="pricing-objections">
+---
+name: pricing-objections
+description: Use when a prospect pushes back on price. Responses by objection type.
+---
+# Pricing objections
+
+## Too expensive
+- Ask what they are comparing against. Anchor on outcome, not seat price.
+
+## No budget this year
+- Offer a paid pilot scoped to one team.
+</script>
+
+<script>
+'use strict';
+/* ---------- icons (Lucide paths) ---------- */
+const ICONS={
+folder:'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+'folder-open':'<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
+'folder-plus':'<path d="M12 10v6"/><path d="M9 13h6"/><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+file:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+'file-plus':'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M12 18v-6"/>',
+'chev-r':'<path d="m9 18 6-6-6-6"/>','chev-d':'<path d="m6 9 6 6 6-6"/>',
+search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+pencil:'<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+history:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+user:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+'user-plus':'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
+'user-minus':'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" x2="16" y1="11" y2="11"/>',
+'user-check':'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>',
+activity:'<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+rocket:'<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>',
+commit:'<circle cx="12" cy="12" r="3"/><line x1="3" x2="9" y1="12" y2="12"/><line x1="15" x2="21" y1="12" y2="12"/>',
+check:'<path d="M20 6 9 17l-5-5"/>',x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+trash:'<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+more:'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+moon:'<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+shield:'<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+key:'<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/>',
+plug:'<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+copy:'<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+'link-off':'<path d="M9 17H7A5 5 0 0 1 7 7"/><path d="M15 7h2a5 5 0 0 1 4 8"/><line x1="8" x2="12" y1="12" y2="12"/><line x1="2" x2="22" y1="2" y2="22"/>',
+code:'<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
+image:'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+bold:'<path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/>',
+italic:'<line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/>',
+heading:'<path d="M6 12h12"/><path d="M6 20V4"/><path d="M18 20V4"/>',
+list:'<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
+'list-ol':'<path d="M10 12h11"/><path d="M10 18h11"/><path d="M10 6h11"/><path d="M4 10h2"/><path d="M4 6h1v4"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>',
+quote:'<path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/>',
+'code-block':'<path d="M10 9.5 8 12l2 2.5"/><path d="m14 9.5 2 2.5-2 2.5"/><rect width="18" height="18" x="3" y="3" rx="2"/>',
+'cloud-check':'<path d="m17 15-5.5 5.5L9 18"/><path d="M5 17.743A7 7 0 1 1 15.71 10h1.79a4.5 4.5 0 0 1 1.5 8.742"/>',
+cloud:'<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
+loader:'<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
+eye:'<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+'eye-off':'<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/>',
+diff:'<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M11 18H8a2 2 0 0 1-2-2V9"/>',
+undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
+lock:'<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+menu:'<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
+'panel-right':'<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/>',
+move:'<polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/>',
+type:'<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/>',
+alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+bot:'<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>',
+pointer:'<path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/>',
+cog:'<path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/>',
+sparkles:'<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>',
+rotate:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
+layers:'<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/>',
+back:'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+ban:'<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+crown:'<path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/>',
+flask:'<path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
+globe:'<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+command:'<path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/>',
+arrow:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+filter:'<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+};
+function ic(n,s=16,c=''){return `<svg class="i ${c}" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]||''}</svg>`}
+
+/* ---------- utils ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+let _n=1000;const nid=p=>p+(++_n).toString(36);
+const MIN=6e4,HR=36e5,DAY=864e5,T0=Date.now();
+function ago(ts){const s=Date.now()-ts;if(s<45e3)return 'now';if(s<HR)return Math.round(s/MIN)+'m';if(s<DAY)return Math.round(s/HR)+'h';if(s<30*DAY)return Math.round(s/DAY)+'d';return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'})}
+function fmtTime(ts){const d=new Date(ts);return d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit',hour12:false})}
+function hue(s){let h=7;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h}
+const initials=n=>n.split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+function rnd(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const ROLES=['None','Viewer','Editor','Publisher','Manager'];
+const RICON=['ban','eye','pencil','rocket','shield'];
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* ---------- seed data ---------- */
+const DB={users:[
+ {id:'u1',name:'Alice Chen',email:'alice.chen@contoso.com',role:'owner',status:'active',last:T0-4*MIN},
+ {id:'u2',name:'Marcus Webb',email:'marcus.webb@contoso.com',role:'member',status:'active',last:T0-HR},
+ {id:'u3',name:'Priya Raman',email:'priya.raman@contoso.com',role:'member',status:'active',last:T0-12*MIN},
+ {id:'u4',name:'Jonas Keller',email:'jonas.keller@contoso.com',role:'member',status:'active',last:T0-3*DAY},
+ {id:'u5',name:'Tom Becker',email:'tom.becker@contoso.com',role:'member',status:'active',last:T0-2*DAY},
+ {id:'u6',name:'Sofia Alvarez',email:'sofia.alvarez@contoso.com',role:'member',status:'active',last:T0-5*HR},
+ {id:'u7',name:'Daniel Okafor',email:'daniel.okafor@contoso.com',role:'member',status:'active',last:T0-DAY},
+ {id:'u8',name:'Hannah Lund',email:'hannah.lund@contoso.com',role:'member',status:'suspended',last:T0-41*DAY}],
+teams:[
+ {id:'everyone',name:'everyone',desc:'Every active user',members:[]},
+ {id:'t_eng',name:'Engineering',desc:'Product and platform engineers',members:[{u:'u2',r:'maintainer'},{u:'u3',r:'member'},{u:'u4',r:'member'}]},
+ {id:'t_data',name:'Data',desc:'Analytics engineering',members:[{u:'u3',r:'maintainer'},{u:'u8',r:'member'}]},
+ {id:'t_sales',name:'Sales',desc:'Account executives and SDRs',members:[{u:'u6',r:'maintainer'},{u:'u7',r:'member'}]}],
+nodes:[],grants:[],audit:[],assets:{},
+tokens:[{id:'k1',name:'ci-sync',scopes:['read','write'],created:T0-40*DAY,used:T0-2*HR,exp:T0+50*DAY},{id:'k2',name:'backstage',scopes:['read'],created:T0-90*DAY,used:T0-5*DAY,exp:null}],
+conns:[{id:'c1',client:'Claude',scopes:['read','write'],created:T0-12*DAY,used:T0-3*MIN},{id:'c2',client:'ChatGPT',scopes:['read'],created:T0-30*DAY,used:T0-2*DAY},{id:'c3',client:'Copilot Studio',scopes:['read','write','publish'],created:T0-5*DAY,used:T0-HR}]};
+const U=id=>DB.users.find(u=>u.id===id),N=id=>DB.nodes.find(n=>n.id===id),T=id=>DB.teams.find(t=>t.id===id);
+const SEED={};document.querySelectorAll('script[data-seed]').forEach(s=>SEED[s.dataset.seed]=s.textContent.replace(/^\n/,'').trimEnd()+'\n');
+function folder(id,parent,name,inherit=1){DB.nodes.push({id,parent,kind:'folder',name,inherit,created:T0-200*DAY,by:'u1'})}
+function grant(node,type,pid,role){DB.grants.push({id:nid('g'),node,type,pid,role,by:'u1',ts:T0-150*DAY})}
+function evolve(final,back){const out=[final];let c=final;for(const step of back){for(const[f,r]of step){if(!c.includes(f))console.warn('seed miss',f);c=c.replace(f,r)}out.unshift(c)}return out}
+function doc(id,parent,key,back,msgs,published,authors,startAgo,opts={}){const contents=back?evolve(SEED[key],back):[SEED[key]];const n=contents.length;const vs=opts.noVersions?[]:contents.map((c,i)=>({n:i+1,content:c,msg:msgs[i]||'Update',by:authors[i%authors.length],ts:T0-startAgo*DAY+i*(startAgo*DAY*.8/n)}));DB.nodes.push({id,parent,kind:'doc',name:key,versions:vs,published,draft:opts.draft||null,by:authors[0],created:T0-startAgo*DAY})}
+folder('f_hub',null,'_hub');folder('f_eng',null,'Engineering');folder('f_data','f_eng','Data');folder('f_sec','f_eng','Security',0);folder('f_sales',null,'Sales');
+grant('f_hub','team','everyone',1);grant('f_eng','team','everyone',1);grant('f_eng','team','t_eng',3);grant('f_data','team','t_data',3);grant('f_sec','user','u4',4);grant('f_sec','team','t_eng',1);grant('f_sales','team','everyone',1);grant('f_sales','team','t_sales',3);grant('f_sales','user','u6',4);
+doc('d_auth','f_hub','hub-authoring',null,['Built-in skill'],1,['u1'],120);
+doc('d_prom','f_hub','hub-promote',[[['6. Verify with `get_skill` and report the published version.\n',''],['- Always report the version number you published.\n','']]],['Built-in skill','Verify and report the version'],2,['u1'],120);
+doc('d_acc','f_hub','hub-access',null,['Built-in skill'],1,['u1'],120);
+doc('d_cr','f_eng','code-review',[[['\n## Escalate\n- Anything touching auth, billing or data deletion needs a second reviewer. See [secrets-handling](../Security/secrets-handling.md).\n','']],[['- Suggest code, do not describe it.\n','']],[['4. Check risk: migrations, feature flags, rollback path.\n5. Style last','4. Style last']]],['Initial checklist','Add risk step','Suggest code in comments','Escalation for sensitive areas'],4,['u2','u4','u2','u3'],60);
+doc('d_ir','f_eng','incident-runbook',[
+ [['- **Scribe** records every action with a timestamp.\n',''],['| SEV3 | Minor, workaround exists | 2 h |','| SEV3 | Minor, workaround exists | 1 h |']],
+ [['dashboard for 15 minutes.','dashboard.']],
+ [['- File follow-ups as tickets with an owner and a date.\n','']],
+ [['![Severity matrix](asset://a-sev)\n\n','']],
+ [['| SEV2 | Major feature degraded | 30 min |','| SEV2 | Major feature degraded | 1 h |']],
+ [['1. Mitigate first. Roll back before you debug.','1. Mitigate first.']],
+ [['\n## After\n- Write the postmortem within 3 business days.\n','']]],
+ ['Initial runbook','Add postmortem section','Roll back before debugging','SEV2 updates every 30 min','Add severity diagram','File follow-ups as tickets','Confirm recovery for 15 min','Add scribe, SEV3 every 2 h'],7,['u4','u2','u4','u2','u3','u4','u2','u4'],80);
+doc('d_onb','f_eng','onboarding-notes',null,['First notes'],1,['u2'],30);
+doc('d_sql','f_data','sql-review',[[['- Check the query plan for full scans on tables over 10 GB.\n',''],['\nSee [dbt-conventions](./dbt-conventions.md) for model naming.\n','']],[['\n## Safety\n- Migrations are additive. Drop columns in a later release.\n- `UPDATE` and `DELETE` run inside a transaction with a row count check.\n','']]],['Correctness and cost checks','Add safety rules','Query plan check, link dbt conventions'],2,['u3','u3','u2'],45,
+ {draft:null});
+doc('d_dbt','f_data','dbt-conventions',null,[],null,['u3'],2,{noVersions:true,draft:{content:SEED['dbt-conventions'],base:0,by:'u3',ts:T0-2*HR,etag:'e1'}});
+doc('d_sec','f_sec','secrets-handling',null,['Initial policy'],1,['u4'],70);
+doc('d_disc','f_sales','discovery-call',[[['4. How do you measure success for this project?\n','']],[['- Write down one hypothesis about their main problem.\n','']]],['First draft','Add hypothesis prep','Ask about success metrics'],3,['u6','u7','u6'],50);
+doc('d_price','f_sales','pricing-objections',null,['First objections'],null,['u7'],6,{draft:{content:SEED['pricing-objections']+'\n## Competitor is cheaper\n- Compare total cost over 3 years, including migration.\n',base:1,by:'u7',ts:T0-DAY,etag:'e2'}});
+(function(){const d=N('d_sql');const v3=d.versions[2].content;d.draft={content:v3.replace('- Avoid `SELECT *` outside exploration.\n','- Avoid `SELECT *` outside exploration.\n- Prefer `QUALIFY` over nested subqueries for deduplication.\n').replace('10 GB','5 GB'),base:3,by:'u3',ts:T0-12*MIN,etag:'e3'}})();
+
+/* audit seed */
+(function(){const r=rnd(42);const A=DB.audit;const docs=DB.nodes.filter(n=>n.kind==='doc');
+ for(const d of docs){for(const v of d.versions){A.push({id:nid('a'),ts:v.ts,actor:v.by,via:r()<.2?'mcp':'ui',client:null,op:'commit_version',node:d.id,v:v.n,ok:1})}
+  if(d.published){const v=d.versions[d.published-1];A.push({id:nid('a'),ts:v.ts+20*MIN,actor:v.by==='u7'?'u6':v.by,via:'ui',op:'publish_version',node:d.id,v:d.published,ok:1})}}
+ const clients=[['mcp','Claude'],['mcp','ChatGPT'],['mcp','Copilot Studio'],['rest','ci-sync']];const pub=docs.filter(d=>d.published);const actors=['u1','u2','u3','u4','u5','u6','u7'];
+ for(let i=0;i<70;i++){const d=pub[Math.floor(r()*pub.length)];const c=clients[Math.floor(r()*clients.length)];A.push({id:nid('a'),ts:T0-r()*7*DAY,actor:actors[Math.floor(r()*actors.length)],via:c[0],client:c[1],op:r()<.3?'find_skills':'get_skill',node:d.id,v:d.published,ok:1})}
+ A.push({id:nid('a'),ts:T0-3*HR,actor:'u2',via:'mcp',client:'ChatGPT',op:'publish_version',node:'d_cr',v:4,ok:0,detail:'scope_required: publish'});
+ A.push({id:nid('a'),ts:T0-2*DAY,actor:'u1',via:'ui',op:'set_inherit',node:'f_sec',ok:1});
+ A.push({id:nid('a'),ts:T0-2*DAY+MIN,actor:'u1',via:'ui',op:'grant_access',node:'f_sec',ok:1});
+ A.push({id:nid('a'),ts:T0-9*DAY,actor:'u1',via:'ui',op:'set_user_status',node:null,ok:1,detail:'Hannah Lund suspended'});
+ A.push({id:nid('a'),ts:T0-12*MIN,actor:'u3',via:'ui',op:'update_draft',node:'d_sql',ok:1});
+ A.push({id:nid('a'),ts:T0-40*MIN,actor:'u5',via:'mcp',client:'Claude',op:'get_draft',node:'d_sql',ok:0,detail:'forbidden'});
+ A.sort((a,b)=>b.ts-a.ts)})();
+
+/* generated image asset: severity matrix */
+(function(){try{const c=document.createElement('canvas');const W=720,H=200;c.width=W*2;c.height=H*2;const x=c.getContext('2d');x.scale(2,2);
+ const cols=[['SEV1','Outage or data loss','15 min','#dc2626'],['SEV2','Major feature degraded','30 min','#d97706'],['SEV3','Minor, workaround','2 h','#2563eb']];
+ cols.forEach((k,i)=>{const X=12+i*236,Y=12,w=224,h=176;x.fillStyle=k[3];x.globalAlpha=.12;rr(x,X,Y,w,h,14);x.fill();x.globalAlpha=1;x.fillStyle=k[3];rr(x,X+16,Y+16,64,26,8);x.fill();x.fillStyle='#fff';x.font='600 13px system-ui, sans-serif';x.fillText(k[0],X+28,Y+34);x.fillStyle=k[3];x.font='600 15px system-ui, sans-serif';x.fillText(k[1],X+16,Y+82);x.font='500 13px system-ui, sans-serif';x.globalAlpha=.85;x.fillText('Update every',X+16,Y+128);x.font='700 26px system-ui, sans-serif';x.globalAlpha=1;x.fillText(k[2],X+16,Y+158)});
+ DB.assets['a-sev']={data:c.toDataURL('image/png'),name:'severity-matrix.png'}}catch(e){}
+ function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}})();
+
+/* ---------- state ---------- */
+const narrow=()=>window.matchMedia('(max-width:860px)').matches;
+const S={screen:'app',me:'u1',view:'files',sel:'d_sql',open:new Set(['f_hub','f_eng','f_data']),drawer:narrow()?null:'history',viewing:null,editing:false,edit:null,menu:null,modal:null,renaming:null,q:'',searchOpen:false,sIdx:0,mTree:false,teamId:null,teamTab:'members',peopleQ:'',teamsQ:'',selUsers:new Set(),auditF:{actor:'',op:'',via:'',range:'7d',q:''},drag:null,consentScopes:new Set(['read','write']),consentClient:'Claude'};
+const PRESETS=[['u1','Owner'],['u2','Publisher'],['u5','Viewer']];
+const MAX_SCOPES=['read','write','publish','manage'];
+const SCOPES=[['read','eye','Read','Find and read published skills'],['write','pencil','Write','Create docs, edit drafts, commit'],['publish','rocket','Publish','Publish and unpublish versions'],['manage','users','Manage','Change access, move, delete'],['admin','shield','Admin','Users, teams and audit']];
+
+/* ---------- model ---------- */
+function alive(id){let n=N(id);while(n){if(n.deleted)return false;n=n.parent?N(n.parent):null}return true}
+function principals(uid){return['user:'+uid,'team:everyone',...DB.teams.filter(t=>t.id!=='everyone'&&t.members.some(m=>m.u===uid)).map(t=>'team:'+t.id)]}
+function roleOf(uid,id){const u=U(uid),n=N(id);if(!u||!n||u.status!=='active')return 0;if(u.role==='owner')return 4;const P=principals(uid);let f=n.kind==='doc'?N(n.parent):n,r=0;while(f){for(const g of DB.grants)if(g.node===f.id&&P.includes(g.type+':'+g.pid))r=Math.max(r,g.role);if(!f.inherit)break;f=f.parent?N(f.parent):null}return r}
+const role=id=>roleOf(S.me,id);
+function explain(uid,id){const u=U(uid);if(u.status!=='active')return{r:0,why:'Suspended'};if(u.role==='owner')return{r:4,why:'Org owner'};const P=principals(uid);let f=N(id);if(f.kind==='doc')f=N(f.parent);let best=null;while(f){for(const g of DB.grants)if(g.node===f.id&&P.includes(g.type+':'+g.pid)&&(!best||g.role>best.g.role))best={g,f};if(!f.inherit)break;f=f.parent?N(f.parent):null}if(!best)return{r:0,why:'No grant'};return{r:best.g.role,why:pname(best.g.type,best.g.pid)+' on '+best.f.name}}
+function canReadAs(uid,id){const n=N(id);if(!n||!alive(id))return false;const r=roleOf(uid,id);if(r<1)return false;if(n.kind==='doc'&&r<2&&n.published==null)return false;return true}
+const canRead=id=>canReadAs(S.me,id);
+const byKind=(a,b)=>(a.kind===b.kind?0:a.kind==='folder'?-1:1)||a.name.localeCompare(b.name);
+const kids=id=>DB.nodes.filter(n=>n.parent===id&&canRead(n.id)).sort(byKind);
+const roots=()=>DB.nodes.filter(n=>n.kind==='folder'&&canRead(n.id)&&(!n.parent||!canRead(n.parent))).sort(byKind);
+function visPath(id){const out=[];let n=N(id);while(n&&canRead(n.id)){out.unshift(n);n=n.parent?N(n.parent):null}return out}
+const visPathStr=id=>id?visPath(id).map(n=>n.name).join(' / '):'';
+const me=()=>U(S.me),isOwner=()=>me().role==='owner';
+function pname(type,pid){if(type==='user')return U(pid)?.name||pid;return pid==='everyone'?'Everyone':T(pid)?.name||pid}
+function pav(type,pid,s=28){return type==='user'?av(pid,s):tav(pid,s)}
+function av(uid,s=24){const u=U(uid);if(!u)return '';return `<span class="av" style="--h:${hue(u.name)};--s:${s}px" aria-hidden="true">${initials(u.name)}</span>`}
+function tav(tid,s=24){if(tid==='everyone')return `<span class="av sq ev" style="--s:${s}px">${ic('globe',Math.round(s*.55))}</span>`;const t=T(tid);return `<span class="av sq" style="--h:${hue(t?t.name:tid)};--s:${s}px">${ic('users',Math.round(s*.55))}</span>`}
+function cav(name,s=28){return `<span class="av sq cl" style="--s:${s}px">${esc(name[0])}</span>`}
+const head=d=>d.versions.length;
+const vContent=(d,v)=>v==='draft'?d.draft.content:d.versions[v-1].content;
+function defaultView(d){if(role(d.id)<2)return d.published;if(d.published)return d.published;if(head(d))return head(d);return d.draft?'draft':null}
+function currentView(d){if(role(d.id)<2)return d.published;let v=S.viewing;if(v==='draft'&&!d.draft)v=null;if(typeof v==='number'&&v>head(d))v=null;return v??defaultView(d)}
+function latestContent(d){return d.draft?d.draft.content:head(d)?vContent(d,head(d)):''}
+function teamCount(t){return t.id==='everyone'?DB.users.filter(u=>u.status==='active').length:t.members.length}
+function log(op,node,v,o={}){DB.audit.unshift({id:nid('a'),ts:Date.now(),actor:S.me,via:o.via||'ui',client:o.client||null,op,node:node||null,v:v||null,ok:o.ok??1,detail:o.detail||null})}
+function uniqueName(parent,base,skip){let n=base,i=2;while(DB.nodes.some(x=>x.parent===parent&&x.id!==skip&&alive(x.id)&&x.name.toLowerCase()===n.toLowerCase()))n=base+'-'+i++;return n}
+function isDesc(id,anc){let n=N(id);while(n){if(n.id===anc)return true;n=n.parent?N(n.parent):null}return false}
+
+/* ---------- frontmatter & markdown ---------- */
+function splitFM(src){const m=src.match(/^---\n([\s\S]*?)\n---\n/);if(!m)return{fm:null,body:src,rest:''};const fm={};const rest=[];for(const line of m[1].split('\n')){const k=line.match(/^([A-Za-z][\w-]*):\s*(.*)$/);if(k){fm[k[1]]=k[2].replace(/^["']|["']$/g,'');if(k[1]!=='name'&&k[1]!=='description')rest.push(line)}else rest.push(line)}return{fm,body:src.slice(m[0].length),rest:rest.length?rest.join('\n')+'\n':''}}
+function buildFM(name,desc,rest){if(!name&&!desc&&!rest)return '';let s='---\n';if(name)s+='name: '+name+'\n';if(desc)s+='description: '+desc.replace(/\n/g,' ')+'\n';return s+(rest||'')+'---\n'}
+function fmError(E){if(!E.name&&!E.desc)return '';if(!E.name)return 'Add a name, or clear the description to make this a plain document.';if(!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(E.name))return 'Lowercase letters, digits and single hyphens.';if(E.name.length>64)return 'Max 64 characters.';if(!E.desc)return 'Add a description so agents know when to use it.';if(E.desc.length>1024)return 'Max 1024 characters.';return ''}
+function resolveLink(href){const m=href.match(/([^/]+?)(\.md)?$/);if(!m)return null;const name=m[1];return DB.nodes.find(n=>n.kind==='doc'&&n.name===name&&canRead(n.id))||null}
+function imgHtml(alt,src,edit){const md=`![${alt}](${src})`;const a=src.startsWith('asset://')?DB.assets[src.slice(8)]:null;const inner=a?`<img src="${a.data}" alt="${esc(alt)}">`:`<div class="ph">${ic('image',22)}</div>`;return `<figure${edit?` contenteditable="false" data-md="${esc(md)}"`:''}>${inner}${alt?`<figcaption>${esc(alt)}</figcaption>`:''}</figure>`}
+function inl(s,edit){const codes=[];s=s.replace(/`([^`]+)`/g,(m,c)=>{codes.push(c);return '\u0000'+(codes.length-1)+'\u0000'});s=esc(s);
+ s=s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,(m,alt,src)=>{const a=src.startsWith('asset://')?DB.assets[src.slice(8)]:null;return a?`<img src="${a.data}" alt="${alt}" style="max-height:1.4em;vertical-align:middle">`:alt});
+ s=s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,(m,t,h)=>{const raw=h.replace(/&amp;/g,'&');if(edit)return `<a data-href="${h}" href="#">${t}</a>`;if(/^https?:\/\//i.test(raw))return `<a href="${h}" target="_blank" rel="noopener noreferrer">${t}</a>`;if(/^(\.{1,2}\/|[\w-]+\.md$)/.test(raw)){const d=resolveLink(raw);return d?`<a class="int" data-a="go-node" data-id="${d.id}">${ICONS.file?ic('file',12):''}${t}</a>`:`<span>${t}</span>`}return `<span title="Blocked link">${t}</span>`});
+ s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\*)/g,'$1<em>$2</em>');
+ return s.replace(/\u0000(\d+)\u0000/g,(m,k)=>`<code>${esc(codes[+k])}</code>`)}
+function renderMd(src,o={}){const L=src.replace(/\r/g,'').split('\n');let i=0,h='';const edit=!!o.edit;const isBlock=l=>/^(```|#{1,4}\s|>\s?|\s*[-*]\s+|\s*\d+\.\s+|\|)/.test(l)||/^(-{3,}|\*{3,})\s*$/.test(l)||/^!\[[^\]]*\]\([^)]+\)\s*$/.test(l);
+ while(i<L.length){const l=L[i];
+  if(/^```/.test(l)){const b=[];i++;while(i<L.length&&!/^```/.test(L[i]))b.push(L[i++]);i++;h+=`<pre><code>${esc(b.join('\n'))}</code></pre>`;continue}
+  let m=l.match(/^(#{1,4})\s+(.*)$/);if(m){h+=`<h${m[1].length}>${inl(m[2],edit)}</h${m[1].length}>`;i++;continue}
+  if(/^(-{3,}|\*{3,})\s*$/.test(l)){h+='<hr>';i++;continue}
+  if(/^>\s?/.test(l)){const b=[];while(i<L.length&&/^>\s?/.test(L[i]))b.push(L[i++].replace(/^>\s?/,''));h+=`<blockquote>${renderMd(b.join('\n'),o)}</blockquote>`;continue}
+  if(/^\|/.test(l)&&i+1<L.length&&/^\|?\s*:?-{2,}/.test(L[i+1])){const b=[];while(i<L.length&&/^\|/.test(L[i]))b.push(L[i++]);const cells=r=>r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());const hd=cells(b[0]);const rows=b.slice(2).map(cells);const t=`<table><thead><tr>${hd.map(c=>`<th>${inl(c)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${inl(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;h+=`<div class="tbl"${edit?` contenteditable="false" data-md="${esc(b.join('\n'))}"`:''}>${t}</div>`;continue}
+  if(/^\s*[-*]\s+/.test(l)){const b=[];while(i<L.length&&/^\s*[-*]\s+/.test(L[i]))b.push(L[i++].replace(/^\s*[-*]\s+/,''));h+=`<ul>${b.map(x=>`<li>${inl(x,edit)}</li>`).join('')}</ul>`;continue}
+  if(/^\s*\d+\.\s+/.test(l)){const b=[];while(i<L.length&&/^\s*\d+\.\s+/.test(L[i]))b.push(L[i++].replace(/^\s*\d+\.\s+/,''));h+=`<ol>${b.map(x=>`<li>${inl(x,edit)}</li>`).join('')}</ol>`;continue}
+  m=l.match(/^!\[([^\]]*)\]\(([^)\s]+)\)\s*$/);if(m){h+=imgHtml(m[1],m[2],edit);i++;continue}
+  if(!l.trim()){i++;continue}
+  const b=[];while(i<L.length&&L[i].trim()&&!(b.length&&isBlock(L[i])))b.push(L[i++]);h+=`<p>${inl(b.join(' '),edit)}</p>`}
+ return h}
+function htmlToMd(root){const out=[];for(const el of root.childNodes)blk(el,out);return out.join('\n\n').replace(/\n{3,}/g,'\n\n').trim()+'\n'}
+function blk(el,out){if(el.nodeType===3){const t=el.textContent.trim();if(t)out.push(t);return}if(el.nodeType!==1)return;if(el.dataset&&el.dataset.md){out.push(el.dataset.md);return}const t=el.tagName;
+ if(/^H[1-4]$/.test(t)){const x=inlMd(el).trim();if(x)out.push('#'.repeat(+t[1])+' '+x);return}
+ if(t==='UL'||t==='OL'){out.push([...el.children].map((li,i)=>(t==='UL'?'- ':(i+1)+'. ')+inlMd(li).trim().replace(/\n+/g,' ')).join('\n'));return}
+ if(t==='PRE'){out.push('```\n'+el.textContent.replace(/\n$/,'')+'\n```');return}
+ if(t==='BLOCKQUOTE'){const sub=[];for(const c of el.childNodes)blk(c,sub);out.push(sub.join('\n\n').split('\n').map(l=>'> '+l).join('\n'));return}
+ if(t==='HR'){out.push('---');return}if(t==='BR')return;
+ if([...el.children].some(c=>/^(P|DIV|UL|OL|H\d|PRE|BLOCKQUOTE|FIGURE|TABLE)$/.test(c.tagName))){for(const c of el.childNodes)blk(c,out);return}
+ const x=inlMd(el).trim();if(x)out.push(x)}
+function inlMd(el){let s='';for(const n of el.childNodes){if(n.nodeType===3){s+=n.textContent;continue}if(n.nodeType!==1)continue;if(n.dataset&&n.dataset.md){s+=n.dataset.md;continue}const t=n.tagName,c=inlMd(n);
+ if(t==='STRONG'||t==='B')s+=c.trim()?'**'+c+'**':c;else if(t==='EM'||t==='I')s+=c.trim()?'*'+c+'*':c;else if(t==='CODE')s+='`'+n.textContent+'`';else if(t==='A')s+='['+c+']('+(n.dataset.href||n.getAttribute('href')||'')+')';else if(t==='BR')s+='\n';else if(t==='UL'||t==='OL')s+='';else s+=c}return s.replace(/ /g,' ')}
+
+/* ---------- diff ---------- */
+function lineDiff(a,b){const A=a.split('\n'),B=b.split('\n'),n=A.length,m=B.length;const dp=Array.from({length:n+1},()=>new Int32Array(m+1));for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)dp[i][j]=A[i]===B[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);const ops=[];let i=0,j=0;while(i<n&&j<m){if(A[i]===B[j]){ops.push({t:' ',a:i+1,b:j+1,s:A[i]});i++;j++}else if(dp[i+1][j]>=dp[i][j+1]){ops.push({t:'-',a:i+1,s:A[i]});i++}else{ops.push({t:'+',b:j+1,s:B[j]});j++}}while(i<n){ops.push({t:'-',a:i+1,s:A[i]});i++}while(j<m){ops.push({t:'+',b:j+1,s:B[j]});j++}return ops}
+function diffStat(ops){return{p:ops.filter(o=>o.t==='+').length,m:ops.filter(o=>o.t==='-').length}}
+function statHtml(ops){const s=diffStat(ops);return `<span class="stat"><span class="p">+${s.p}</span><span class="m">-${s.m}</span></span>`}
+function diffHtml(ops){const keep=new Set();ops.forEach((o,i)=>{if(o.t!==' ')for(let k=i-3;k<=i+3;k++)keep.add(k)});let h='',gap=0;const flush=()=>{if(gap){h+=`<tr class="g"><td colspan="3">${ic('more',14)} ${gap}</td></tr>`;gap=0}};
+ ops.forEach((o,i)=>{if(o.t===' '&&!keep.has(i)){gap++;return}flush();h+=`<tr class="${o.t==='+'?'a':o.t==='-'?'d':''}"><td class="n">${o.a||''}</td><td class="n">${o.b||''}</td><td class="c"><span class="sg">${o.t===' '?'':o.t}</span>${esc(o.s)||' '}</td></tr>`});flush();
+ if(!ops.some(o=>o.t!==' '))return `<div class="empty" style="padding:30px 0">${ic('check',20)}<span>Identical</span></div>`;return `<div class="diff"><table>${h}</table></div>`}
+
+/* ---------- render: chrome ---------- */
+const ib=(a,icon,tip,extra='')=>`<button class="ib" data-a="${a}" aria-label="${esc(tip.split('|')[0])}" data-tip="${esc(tip)}" ${extra}>${ic(icon,17)}</button>`;
+function render(){const keep=snap();if(S.editing)syncEditor();const root=$('#root');
+ if(S.screen==='login')root.innerHTML=loginHtml();else if(S.screen==='consent')root.innerHTML=consentHtml();else root.innerHTML=shellHtml();
+ restore(keep);if(S.focusNext){const f=$(S.focusNext);S.focusNext=null;if(f){f.focus();if(f.select&&f.dataset.selectAll!==undefined)f.select()}}}
+function snap(){const a=document.activeElement;const o={id:a&&a.id,ss:null,se:null,sc:{}};try{o.ss=a.selectionStart;o.se=a.selectionEnd}catch(e){}for(const s of ['.main','.tree-body','.drawer-body','.modal-body','.pal-list'])o.sc[s]=$(s)?.scrollTop;return o}
+function restore(o){for(const s in o.sc){const e=$(s);if(e&&o.sc[s]!=null)e.scrollTop=o.sc[s]}if(o.id&&o.id!=='ed-body'){const e=document.getElementById(o.id);if(e){e.focus({preventScroll:true});try{if(o.ss!=null)e.setSelectionRange(o.ss,o.se)}catch(x){}}}}
+function shellHtml(){const pm=['people','teams','team','audit','tokens','connections'].includes(S.view);const n=N(S.sel);const showDrawer=!pm&&S.drawer&&n&&canRead(n.id)&&S.view==='files';
+ return `<div class="shell ${showDrawer?'with-drawer':''} ${pm?'page-mode':''} ${S.mTree?'m-tree':''}">${topHtml()}${railHtml()}<aside class="tree" aria-label="Folders">${treePane()}</aside><main class="main" id="main">${mainHtml()}</main><aside class="drawer" aria-label="Details">${showDrawer?drawerHtml():''}</aside><div class="scrim" data-a="scrim"></div></div>${menuHtml()}${modalHtml()}`}
+function topHtml(){const u=me();return `<header class="top">
+ <button class="ib mbtn" data-a="m-tree" aria-label="Folders">${ic('menu',18)}</button>
+ <div class="brand"><span class="logo">${ic('layers',15)}</span><span class="nm">SkillHub</span><span class="org">Contoso</span></div>
+ <div class="search">${ic('search',16,'si')}<input id="q" data-in="q" placeholder="Search skills" autocomplete="off" spellcheck="false" value="${esc(S.q)}" aria-label="Search skills"><kbd>/</kbd>${S.searchOpen&&S.q.trim()?searchResHtml():''}</div>
+ <div class="right">
+  <button class="ib hide-m" data-a="palette" aria-label="Quick open" data-tip="Quick open|Ctrl K">${ic('command',17)}</button>
+  <button class="ib" data-a="menu" data-m="dev" aria-label="Prototype controls" data-tip="Prototype controls">${ic('flask',17)}</button>
+  <button class="ib" data-a="menu" data-m="user" aria-label="Account" data-tip="${esc(u.name)}" style="width:auto;padding:0 4px">${av(u.id,28)}</button>
+ </div></header>`}
+function railHtml(){const o=isOwner();const it=(v,icon,tip)=>`<button class="ib ${S.view===v||(v==='teams'&&S.view==='team')?'on':''}" data-a="go" data-v="${v}" aria-label="${tip}" data-tip="${tip}">${ic(icon,19)}</button>`;
+ return `<nav class="rail">${it('files','folder','Library')}${o?it('people','user','People')+it('teams','users','Teams')+it('audit','activity','Audit'):''}<div class="sp"></div>${it('tokens','key','API tokens')}${it('connections','plug','Connections')}<button class="ib" data-a="theme" aria-label="Theme" data-tip="Theme">${ic(isDark()?'sun':'moon',18)}</button></nav>`}
+function treePane(){const canRoot=isOwner();const hasTrash=DB.nodes.some(n=>n.deleted&&role(n.id)>=4);
+ return `<div class="tree-head"><span class="lbl">Shared with me</span>${canRoot?`<button class="ib xs" data-a="new-folder" data-id="" aria-label="New folder" data-tip="New folder">${ic('folder-plus',15)}</button>`:''}<button class="ib xs" data-a="collapse" aria-label="Collapse all" data-tip="Collapse all">${ic('chev-d',15)}</button></div>
+ <div class="tree-body" id="tree-body" data-drop-root="1">${treeRows(roots(),0)||`<div class="empty" style="padding:40px 0">${ic('folder',20)}</div>`}</div>
+ ${hasTrash?`<div class="tree-foot"><button class="btn ghost sm ${S.view==='trash'?'on':''}" data-a="go" data-v="trash" style="color:var(--muted)">${ic('trash',14)}<span>Trash</span></button></div>`:''}`}
+function treeRows(list,d){return list.map(n=>{const open=S.open.has(n.id),sel=S.sel===n.id&&S.view==='files';const mv=n.parent&&role(n.parent)>=4;let h=`<div class="row ${sel?'sel':''}" data-a="sel" data-id="${n.id}" data-kind="${n.kind}" draggable="${mv?'true':'false'}" style="--d:${d}" role="treeitem" aria-expanded="${n.kind==='folder'?open:''}">`;
+ h+=n.kind==='folder'?`<span class="tw ${open?'open':''}" data-a="tw" data-id="${n.id}">${ic('chev-r',13)}</span>${ic(open?'folder-open':'folder',16,'ri')}`:`<span class="tw"></span>${ic('file',16,'ri')}`;
+ h+=S.renaming===n.id?`<input id="rn" value="${esc(n.name)}" data-select-all aria-label="Name">`:`<span class="nm">${esc(n.name)}</span>`;
+ if(n.kind==='folder'&&!n.inherit)h+=`<span class="lk" data-tip="Not inheriting access">${ic('link-off',12)}</span>`;
+ if(n.kind==='doc')h+=mark(n);
+ h+=`<button class="ib xs more" data-a="ctx-btn" data-id="${n.id}" aria-label="Actions">${ic('more',15)}</button></div>`;
+ if(n.kind==='folder'&&open){const k=kids(n.id);h+=k.length?treeRows(k,d+1):`<div class="empty-row" style="--d:${d}">Empty</div>`}return h}).join('')}
+function mark(n){if(role(n.id)<2)return '';const h=head(n),p=n.published;if(n.draft)return `<span class="mk dot" data-tip="Draft in progress"></span>`;if(p==null)return `<span class="mk ring" data-tip="Not published"></span>`;if(h>p)return `<span class="mk amber" data-tip="v${h} newer than published v${p}"></span>`;return `<span class="mk ok" data-tip="Published v${p}">${ic('check',13)}</span>`}
+
+/* ---------- search ---------- */
+function searchAll(q){const toks=q.toLowerCase().split(/\s+/).filter(Boolean);if(!toks.length)return{skills:[],names:[],toks};const last=toks.length-1;const skills=[];
+ for(const d of DB.nodes){if(d.kind!=='doc'||!d.published||!canRead(d.id))continue;const{fm,body}=splitFM(vContent(d,d.published));if(!fm||!fm.name)continue;let sc=0;
+  toks.forEach((t,i)=>{const re=new RegExp('\\b'+reEsc(t)+(i===last?'':'\\b'),'g');[[fm.name,4],[fm.description||'',2],[body,1]].forEach(([f,w])=>{sc+=(f.toLowerCase().match(re)||[]).length*w})});if(sc>0)skills.push({d,fm,body,sc})}
+ skills.sort((a,b)=>b.sc-a.sc);const names=DB.nodes.filter(n=>canRead(n.id)&&toks.every(t=>n.name.toLowerCase().includes(t))&&!skills.some(s=>s.d.id===n.id)).slice(0,4);return{skills:skills.slice(0,6),names,toks}}
+function hl(text,toks){const s=esc(text);if(!toks.length)return s;return s.replace(new RegExp('('+toks.map(t=>reEsc(esc(t))).join('|')+')','gi'),'<mark>$1</mark>')}
+function snippet(body,toks){const plain=body.replace(/[#*`>|_\[\]()!-]+/g,' ').replace(/\s+/g,' ');const low=plain.toLowerCase();let i=-1;for(const t of toks){i=low.indexOf(t);if(i>=0)break}if(i<0)return '';const s=Math.max(0,i-40);return(s?'... ':'')+plain.slice(s,s+120)}
+function searchResHtml(){const r=searchAll(S.q);const items=[...r.skills.map(s=>({id:s.d.id,html:`<span class="sk">${ic('sparkles',15)}</span><div class="grow"><div class="st">${hl(s.fm.name,r.toks)}</div><div class="sd">${hl(s.fm.description||'',r.toks)}</div>${snippet(s.body,r.toks)?`<div class="sp">${hl(snippet(s.body,r.toks),r.toks)}</div>`:''}</div><span class="faint" style="font-size:11.5px;white-space:nowrap">${esc(visPathStr(s.d.parent))}</span>`})),...r.names.map(n=>({id:n.id,html:`<span class="faint">${ic(n.kind==='folder'?'folder':'file',15)}</span><div class="grow"><div style="font-size:13px">${hl(n.name,r.toks)}</div></div><span class="faint" style="font-size:11.5px">${esc(visPathStr(n.parent))}</span>`}))];
+ S._sItems=items.map(i=>i.id);if(!items.length)return `<div class="sres"><div class="empty" style="padding:24px 0">${ic('search',18)}<span>No matches</span></div></div>`;
+ return `<div class="sres" role="listbox">${items.map((it,i)=>`<button class="sr ${i===S.sIdx?'on':''}" data-a="go-node" data-id="${it.id}" role="option">${it.html}</button>`).join('')}</div>`}
+
+/* ---------- main views ---------- */
+function mainHtml(){switch(S.view){case 'people':return peopleHtml();case 'teams':return teamsHtml();case 'team':return teamHtml();case 'audit':return auditHtml();case 'tokens':return tokensHtml();case 'connections':return connsHtml();case 'trash':return trashHtml()}const n=N(S.sel);if(!n||!canRead(n.id))return homeHtml();return n.kind==='doc'?docHtml(n):folderHtml(n)}
+function crumbs(id){const p=visPath(id);return p.map((n,i)=>i===p.length-1?`<span class="cur">${ic(n.kind==='folder'?'folder':'file',14)}${esc(n.name)}</span>`:`<button data-a="go-node" data-id="${n.id}">${esc(n.name)}</button>${ic('chev-r',12)}`).join('')}
+function homeHtml(){const r=roots();return `<div class="page"><div class="fhead"><span class="fic">${ic('layers',20)}</span><h1>Shared with me</h1></div><div class="tiles">${r.map(f=>{const c=DB.nodes.filter(n=>n.parent===f.id&&canRead(n.id)).length;return `<button class="tile" data-a="go-node" data-id="${f.id}"><span class="fic">${ic('folder',18)}</span><div><b>${esc(f.name)}</b><div class="muted" style="font-size:12.5px">${c} ${c===1?'item':'items'}</div></div></button>`}).join('')}</div></div>`}
+function docMetaContent(d){if(role(d.id)>=2)return latestContent(d);return d.published?vContent(d,d.published):''}
+function folderHtml(f){const r=role(f.id);const items=kids(f.id);
+ return `<div class="page"><div class="dh"><nav class="crumbs">${crumbs(f.id)}</nav><div class="acts">
+ ${r>=2?ib('new-doc','file-plus','New document')+ib('new-folder','folder-plus','New folder',`data-id="${f.id}"`):''}${r>=4?ib('share','user-plus','Share'):''}${ib('drawer','panel-right','Details','class="hide-m"')}${r>=4?ib('menu','more','More',`data-m="more" data-id="${f.id}"`):''}</div></div>
+ <div class="fhead"><span class="fic">${ic('folder',20)}</span><h1>${esc(f.name)}</h1>${!f.inherit?`<span class="chip warn" data-tip="Access is set here only">${ic('link-off',12)}Isolated</span>`:''}</div>
+ ${items.length?`<div class="items">${items.map(n=>{if(n.kind==='folder'){const c=kids(n.id).length;return `<div class="item" data-a="go-node" data-id="${n.id}"><span class="faint">${ic('folder',17)}</span><div style="min-width:0"><div class="t ell">${esc(n.name)}</div></div><span class="faint" style="font-size:12px">${c}</span><span class="v"></span><span class="w"></span><span></span></div>`}
+  const{fm}=splitFM(docMetaContent(n));const rv=role(n.id);const last=rv>=2?(n.draft?n.draft.ts:head(n)?n.versions[head(n)-1].ts:n.created):n.versions[n.published-1].ts;const by=rv>=2?(n.draft?n.draft.by:head(n)?n.versions[head(n)-1].by:n.by):n.versions[n.published-1].by;
+  return `<div class="item" data-a="go-node" data-id="${n.id}"><span class="${fm&&fm.name?'':'faint'}" style="${fm&&fm.name?'color:var(--accent)':''}">${ic(fm&&fm.name?'sparkles':'file',17)}</span><div style="min-width:0"><div class="t ell">${esc(n.name)}</div>${fm&&fm.description?`<div class="d">${esc(fm.description)}</div>`:''}</div>${mark(n)||'<span></span>'}<span class="v">${rv>=2?(head(n)?'v'+head(n):''):'v'+n.published}</span><span class="w">${ago(last)}</span>${av(by,22)}</div>`}).join('')}</div>`
+ :`<div class="empty"><span class="eic">${ic('folder-open',22)}</span>${r>=2?`<div class="row-flex"><button class="btn sm" data-a="new-doc">${ic('file-plus',14)}<span>Document</span></button><button class="btn sm" data-a="new-folder" data-id="${f.id}">${ic('folder-plus',14)}<span>Folder</span></button></div>`:''}</div>`}</div>`}
+function pillHtml(d){const h=head(d),p=d.published;let x='';x+=p?`<span class="pp ok">${ic('check',11)}v${p}</span>`:`<span class="pp mute">${ic('eye-off',11)}</span>`;if(h>(p||0))x+=`<span class="pp warn">+${h-(p||0)}</span>`;if(d.draft)x+=`<span class="pp dot"></span>`;
+ const tip=(p?'Published v'+p:'Not published')+(h>(p||0)?', '+(h-(p||0))+' newer':'')+(d.draft?', draft':'');return `<button class="pill-btn" data-a="menu" data-m="versions" data-id="${d.id}" aria-label="Versions" data-tip="${tip}">${x}${ic('chev-d',13)}</button>`}
+function docHtml(d){const r=role(d.id);if(S.editing&&S.edit&&S.edit.id===d.id)return editorHtml(d);const v=currentView(d);
+ let acts='';if(r>=2)acts+=pillHtml(d)+ib('edit','pencil','Edit|E');if(r>=3&&head(d))acts+=ib('publish-open','rocket','Publish');if(r>=4)acts+=ib('share','user-plus','Share');acts+=ib('copy-link','link','Copy link','class="ib hide-m"')+ib('drawer','panel-right','Details');if(r>=2)acts+=ib('menu','more','More',`data-m="more" data-id="${d.id}"`);
+ let body,banner='';
+ if(v==null)body=`<div class="empty"><span class="eic">${ic('file',22)}</span>${r>=2?`<button class="btn primary" data-a="edit">${ic('pencil',14)}<span>Start writing</span></button>`:''}</div>`;
+ else{const{fm,body:b}=splitFM(vContent(d,v));
+  if(v==='draft')banner=`<div class="banner draft">${ic('pencil',15)}<div class="grow"><b>Draft</b>${av(d.draft.by,18)}<span class="muted">${ago(d.draft.ts)}</span></div><button class="btn sm" data-a="edit">${ic('pencil',13)}<span>Continue</span></button><button class="btn sm" data-a="diff-open" data-v="draft">${ic('diff',13)}</button><button class="btn sm ghost danger" data-a="discard" data-confirm aria-label="Discard draft" data-tip="Discard draft">${ic('trash',13)}</button></div>`;
+  else if(r>=2&&v!==d.published)banner=`<div class="banner old">${ic('clock',15)}<div class="grow"><b>v${v}</b><span class="muted">${d.published?'published is v'+d.published:'not published'}</span></div>${d.published?`<button class="btn sm" data-a="view" data-v="${d.published}" data-tip="Show published">${ic('back',13)}</button>`:''}<button class="btn sm" data-a="diff-open" data-v="${v}" data-tip="Compare">${ic('diff',13)}</button>${r>=3?`<button class="btn sm primary" data-a="publish-open" data-v="${v}">${ic('rocket',13)}<span>Publish v${v}</span></button>`:''}</div>`;
+  body=`${fm&&fm.name?`<div class="skill-card"><span class="sk" data-tip="Skill, visible to agents">${ic('sparkles',16)}</span><div class="grow"><code>${esc(fm.name)}</code><p>${esc(fm.description||'')}</p></div></div>`:''}<article class="md">${renderMd(b)}</article>`}
+ return `<div class="page"><div class="dh"><nav class="crumbs">${crumbs(d.id)}</nav><div class="acts">${acts}</div></div>${banner}${body}</div>`}
+function saveIcon(){const s=S.edit?.save;return s==='saving'?ic('loader',16,'spin'):s==='pending'?ic('cloud',16):ic('cloud-check',16)}
+function editorHtml(d){const E=S.edit;const err=fmError(E);
+ return `<div class="page"><div class="dh"><nav class="crumbs">${crumbs(d.id)}</nav><div class="acts">
+ <span class="save ${E.save==='saved'?'ok':''}" id="save-ic" data-tip="${E.save==='saved'?'Saved to draft':'Saving'}">${saveIcon()}</span>
+ ${d.draft?`<button class="ib" data-a="discard" data-confirm aria-label="Discard draft" data-tip="Discard draft">${ic('trash',17)}</button>`:''}
+ <button class="btn primary" data-a="commit-open" data-tip="Commit|Ctrl S">${ic('commit',15)}<span>Commit</span></button>
+ <button class="ib" data-a="edit-close" aria-label="Close editor" data-tip="Close|Esc">${ic('x',17)}</button></div></div>
+ <div class="fm-card"><div class="fm-row" data-tip="Skill name">${ic('sparkles',16)}<input id="ed-name" data-in="ed-name" class="fm-name" value="${esc(E.name)}" placeholder="skill-name" spellcheck="false" autocomplete="off" aria-label="Skill name"></div>
+ <textarea id="ed-desc" data-in="ed-desc" class="fm-desc" rows="1" placeholder="When should an agent use this?" aria-label="Description">${esc(E.desc)}</textarea><div class="fm-err" id="ed-err">${esc(err)}</div></div>
+ <div class="fmt" role="toolbar">${E.raw?'':[['h2','heading','Heading'],['bold','bold','Bold|Ctrl B'],['italic','italic','Italic|Ctrl I'],['ul','list','List'],['ol','list-ol','Numbered list'],['quote','quote','Quote'],['code','code-block','Code block']].map(([c,i,t])=>`<button class="ib sm" data-a="fmt" data-cmd="${c}" aria-label="${t.split('|')[0]}" data-tip="${t}">${ic(i,16)}</button>`).join('')+'<span class="sep"></span>'}
+ <button class="ib sm" data-a="img" aria-label="Image" data-tip="Image">${ic('image',16)}</button><div class="grow"></div>
+ <button class="ib sm ${E.raw?'on':''}" data-a="raw" aria-label="Markdown" data-tip="${E.raw?'Visual':'Markdown'}">${ic('code',16)}</button></div>
+ ${E.raw?`<textarea id="ed-raw" data-in="ed-raw" class="raw" spellcheck="false" aria-label="Markdown">${esc(E.body)}</textarea>`:`<div id="ed-body" class="md editable" contenteditable="true" data-ph="Start writing" role="textbox" aria-multiline="true">${renderMd(E.body,{edit:true})}</div>`}</div>`}
+
+/* ---------- drawer ---------- */
+function drawerHtml(){const n=N(S.sel);const r=role(n.id);const tabs=[];if(n.kind==='doc'&&r>=2)tabs.push(['history','history','History']);tabs.push(['access','users','Access']);if(r>=2)tabs.push(['activity','activity','Activity']);let tab=S.drawer;if(!tabs.some(t=>t[0]===tab))tab=tabs[0][0];
+ const body=tab==='history'?historyHtml(n):tab==='access'?accessHtml(n):activityHtml(n);
+ return `<div class="dtabs" role="tablist">${tabs.map(t=>`<button class="t ${t[0]===tab?'on':''}" data-a="dtab" data-v="${t[0]}" role="tab" aria-selected="${t[0]===tab}" aria-label="${t[2]}" ${t[0]===tab?'':`data-tip="${t[2]}"`}>${ic(t[1],16)}<span>${t[2]}</span></button>`).join('')}<div class="grow"></div><button class="ib sm" data-a="drawer-close" aria-label="Close" data-tip="Close">${ic('x',16)}</button></div><div class="drawer-body">${body}</div>`}
+function historyHtml(d){const cur=currentView(d),p=d.published,cp=role(d.id)>=3;let h='';
+ if(d.draft)h+=`<button class="hrow ${cur==='draft'?'cur':''}" data-a="view" data-v="draft"><span class="vn dr">${ic('pencil',12)}</span><div class="hmain"><div class="ht">Draft</div><div class="hs">${av(d.draft.by,16)}${esc(U(d.draft.by).name.split(' ')[0])} · ${ago(d.draft.ts)}</div></div><div class="hact"><span class="ib xs" data-a="diff-open" data-v="draft" data-tip="Compare with v${head(d)||0}">${ic('diff',14)}</span></div></button>`;
+ for(let n=head(d);n>=1;n--){const v=d.versions[n-1];h+=`<div class="hrow ${cur===n?'cur':''}" data-a="view" data-v="${n}" role="button" tabindex="0"><span class="vn">v${n}</span><div class="hmain"><div class="ht">${esc(v.msg)}</div><div class="hs">${av(v.by,16)}${esc(U(v.by).name.split(' ')[0])} · ${ago(v.ts)}</div></div><div class="hact">${n>1?`<span class="ib xs" data-a="diff-open" data-v="${n}" data-tip="Compare with v${n-1}">${ic('diff',14)}</span>`:''}${cp&&n!==p?`<span class="ib xs" data-a="publish-open" data-v="${n}" data-tip="${n<(p||0)?'Roll back to':'Publish'} v${n}">${ic(n<(p||0)?'undo':'rocket',14)}</span>`:''}</div>${n===p?`<span class="hb" data-tip="Published">${ic('check',15,'').replace('class="i ','class="i " style="color:var(--ok)" ')}</span>`:''}</div>`}
+ if(!h)h=`<div class="empty" style="padding:40px 0">${ic('history',20)}</div>`;return h}
+function chainGrants(f){const out=[];let x=f,first=true;while(x){for(const g of DB.grants)if(g.node===x.id)out.push({g,from:first?null:x});if(!x.inherit)break;x=x.parent?N(x.parent):null;first=false}return out}
+function accessHtml(n){const f=n.kind==='doc'?N(n.parent):n;const r=role(n.id);let h=`<div class="prow" style="margin-bottom:6px">${av(S.me,28)}<div class="grow"><div class="pn">You</div><div class="ps">${esc(explain(S.me,f.id).why)}</div></div><span class="chip acc">${ic(RICON[r],12)}${ROLES[r]}</span></div>`;
+ if(r<4)return h;
+ h+=`<div class="sec row-flex" style="justify-content:space-between"><span class="row-flex">${ic('folder',13)}${esc(f.name)}</span>${!f.inherit?`<span data-tip="Not inheriting">${ic('link-off',13)}</span>`:''}</div>`;
+ const rows=chainGrants(f).sort((a,b)=>(a.from?1:0)-(b.from?1:0)||b.g.role-a.g.role);
+ h+=rows.map(({g,from})=>`<div class="prow ${from?'inh':''}">${pav(g.type,g.pid,28)}<div class="grow"><div class="pn">${esc(pname(g.type,g.pid))}</div><div class="ps">${from?'from '+esc(from.name):g.type==='team'?teamCount(T(g.pid))+' members':esc(U(g.pid).email)}</div></div><span class="rl">${ROLES[g.role]}</span></div>`).join('');
+ h+=`<div style="padding:10px 8px"><button class="btn" data-a="share" style="width:100%;justify-content:center">${ic('user-plus',15)}<span>Share</span></button></div>`;return h}
+const OPI={get_skill:'eye',find_skills:'search',commit_version:'commit',publish_version:'rocket',unpublish:'eye-off',update_draft:'pencil',get_draft:'pencil',discard_draft:'rotate',grant_access:'user-plus',revoke_access:'user-minus',set_inherit:'link-off',move_node:'move',rename_node:'type',create_doc:'file-plus',create_folder:'folder-plus',delete_node:'trash',restore_node:'undo',set_user_status:'ban',set_user_role:'crown',mint_api_token:'key',revoke_api_token:'key',revoke_mcp_connection:'plug',add_team_member:'user-plus',remove_team_member:'user-minus',create_team:'users',rename_team:'type',delete_team:'trash',export_tree:'download',login:'logout'};
+const OPL={get_skill:'read',find_skills:'found',commit_version:'committed',publish_version:'published',unpublish:'unpublished',update_draft:'edited draft',get_draft:'opened draft',discard_draft:'discarded draft',grant_access:'shared',revoke_access:'removed access',set_inherit:'changed inheritance',move_node:'moved',rename_node:'renamed',create_doc:'created',create_folder:'created',delete_node:'deleted',restore_node:'restored'};
+const VIA={ui:['pointer','Web'],rest:['terminal','API'],mcp:['bot','Agent'],system:['cog','System']};
+function activityHtml(n){const ids=new Set(DB.nodes.filter(x=>isDesc(x.id,n.id)).map(x=>x.id));const rows=DB.audit.filter(a=>ids.has(a.node)).slice(0,40);if(!rows.length)return `<div class="empty" style="padding:40px 0">${ic('activity',20)}</div>`;
+ return rows.map(a=>`<div class="arow"><span class="aic ${a.ok?(a.op==='publish_version'?'ok':a.op==='commit_version'?'acc':''):'bad'}">${ic(a.ok?OPI[a.op]||'activity':'ban',14)}</span><div class="grow"><div style="font-size:13px" class="ell"><b style="font-weight:500">${esc(U(a.actor)?.name.split(' ')[0]||'System')}</b> <span class="muted">${OPL[a.op]||a.op}${a.v?' v'+a.v:''}${n.kind==='folder'&&a.node!==n.id?' '+esc(N(a.node)?.name||''):''}</span></div><div class="hs"><span data-tip="${VIA[a.via][1]}${a.client?': '+esc(a.client):''}" style="display:inline-flex">${ic(VIA[a.via][0],12)}</span>${a.client?esc(a.client)+' · ':''}${ago(a.ts)}${a.ok?'':' · <span style="color:var(--danger)">'+esc(a.detail||'failed')+'</span>'}</div></div></div>`).join('')}
+
+/* ---------- admin & settings ---------- */
+function peopleHtml(){const q=S.peopleQ.toLowerCase();const list=DB.users.filter(u=>!q||(u.name+' '+u.email).toLowerCase().includes(q));const sel=S.selUsers;
+ return `<div class="page wide"><div class="ph1"><h1>People <span class="count">${DB.users.length}</span></h1><div class="grow"></div><div class="qwrap">${ic('search',15)}<input class="input" id="people-q" data-in="people-q" placeholder="Filter" value="${esc(S.peopleQ)}"></div></div>
+ ${sel.size?`<div class="bulk"><span class="grow">${sel.size} selected</span><button class="btn sm" data-a="bulk" data-v="suspend">${ic('ban',13)}<span>Suspend</span></button><button class="btn sm" data-a="bulk" data-v="activate">${ic('check',13)}<span>Reactivate</span></button><button class="btn sm" data-a="bulk" data-v="clear" aria-label="Clear">${ic('x',13)}</button></div>`:''}
+ <div class="tw-scroll"><table class="t"><thead><tr><th style="width:36px"><input type="checkbox" class="cb" data-ch="sel-all" ${sel.size&&sel.size===list.length?'checked':''} aria-label="Select all"></th><th>Name</th><th>Teams</th><th>Role</th><th>Status</th><th>Last seen</th></tr></thead><tbody>
+ ${list.map(u=>{const ts=DB.teams.filter(t=>t.id!=='everyone'&&t.members.some(m=>m.u===u.id));const self=u.id===S.me;return `<tr class="${sel.has(u.id)?'selr':''}"><td><input type="checkbox" class="cb" data-ch="sel-user" data-id="${u.id}" ${sel.has(u.id)?'checked':''} ${self?'disabled':''} aria-label="Select"></td>
+ <td><div class="row-flex">${av(u.id,30)}<div style="min-width:0"><div style="font-weight:500">${esc(u.name)}${self?' <span class="faint" style="font-weight:400">you</span>':''}</div><div class="muted ell" style="font-size:12.5px">${esc(u.email)}</div></div></div></td>
+ <td><div class="row-flex" style="flex-wrap:wrap;gap:4px">${ts.map(t=>`<span class="chip">${esc(t.name)}</span>`).join('')||'<span class="faint">-</span>'}</div></td>
+ <td><select class="select bare" data-ch="user-role" data-id="${u.id}" ${self?'disabled':''} aria-label="Role"><option value="member" ${u.role==='member'?'selected':''}>Member</option><option value="owner" ${u.role==='owner'?'selected':''}>Owner</option></select></td>
+ <td>${u.status==='active'?`<span class="row-flex" style="gap:6px"><span class="stat-dot on"></span>Active</span>`:`<span class="chip bad">${ic('ban',11)}Suspended</span>`}</td>
+ <td class="num">${ago(u.last)} ${self?'':u.status==='active'?`<button class="ib xs" data-a="user-status" data-id="${u.id}" data-confirm aria-label="Suspend" data-tip="Suspend" style="float:right">${ic('ban',14)}</button>`:`<button class="ib xs" data-a="user-status" data-id="${u.id}" aria-label="Reactivate" data-tip="Reactivate" style="float:right">${ic('undo',14)}</button>`}</td></tr>`}).join('')}</tbody></table></div></div>`}
+function teamsHtml(){const q=S.teamsQ.toLowerCase();const list=DB.teams.filter(t=>!q||t.name.toLowerCase().includes(q));
+ return `<div class="page wide"><div class="ph1"><h1>Teams <span class="count">${DB.teams.length}</span></h1><div class="grow"></div><div class="qwrap">${ic('search',15)}<input class="input" id="teams-q" data-in="teams-q" placeholder="Filter" value="${esc(S.teamsQ)}"></div><button class="btn primary" data-a="new-team">${ic('plus',15)}<span>Team</span></button></div>
+ ${S.newTeam?`<div class="card row-flex" style="margin-bottom:12px">${tav('x',30)}<input class="input grow" id="newteam" placeholder="Team name" value="${esc(S.newTeamName||'')}" data-in="newteam"><button class="btn primary" data-a="create-team">${ic('check',15)}<span>Create</span></button><button class="ib" data-a="cancel-team" aria-label="Cancel">${ic('x',16)}</button></div>`:''}
+ <div class="tw-scroll"><table class="t"><thead><tr><th>Team</th><th>Members</th><th>Folders</th></tr></thead><tbody>${list.map(t=>{const mem=t.id==='everyone'?DB.users.filter(u=>u.status==='active').map(u=>({u:u.id})):t.members;const fc=DB.grants.filter(g=>g.type==='team'&&g.pid===t.id).length;
+ return `<tr style="cursor:pointer" data-a="open-team" data-id="${t.id}"><td><div class="row-flex">${tav(t.id,30)}<div style="min-width:0"><div style="font-weight:500" class="row-flex">${esc(t.id==='everyone'?'Everyone':t.name)}${t.id==='everyone'?`<span class="faint" data-tip="Built in">${ic('lock',12)}</span>`:''}</div><div class="muted ell" style="font-size:12.5px">${esc(t.desc||'')}</div></div></div></td><td><div class="row-flex"><span class="stack">${mem.slice(0,4).map(m=>av(m.u,22)).join('')}</span><span class="num">${mem.length}</span></div></td><td class="num">${fc}</td></tr>`}).join('')}</tbody></table></div></div>`}
+function teamHtml(){const t=T(S.teamId);if(!t)return teamsHtml();const ev=t.id==='everyone';const mem=ev?DB.users.filter(u=>u.status==='active').map(u=>({u:u.id,r:'member'})):t.members;const folders=DB.grants.filter(g=>g.type==='team'&&g.pid===t.id);const tab=S.teamTab;
+ let body='';
+ if(tab==='members')body=`${ev?'':`<div class="addrow" style="margin-bottom:12px;max-width:420px"><div class="qwrap" style="max-width:none">${ic('user-plus',15)}<input class="input" id="add-member-q" data-in="add-member-q" placeholder="Add member" value="${esc(S.addQ||'')}" autocomplete="off"></div>${S.addQ?`<div class="sugg">${DB.users.filter(u=>!t.members.some(m=>m.u===u.id)&&(u.name+u.email).toLowerCase().includes(S.addQ.toLowerCase())).map(u=>`<button class="mi" data-a="add-member" data-id="${u.id}">${av(u.id,22)}<span>${esc(u.name)}</span><span class="r">${esc(u.email)}</span></button>`).join('')||'<div class="mi faint">No one</div>'}</div>`:''}</div>`}
+ <div class="tw-scroll"><table class="t"><tbody>${mem.map(m=>{const u=U(m.u);return `<tr><td><div class="row-flex">${av(u.id,28)}<div><div style="font-weight:500">${esc(u.name)}</div><div class="muted" style="font-size:12.5px">${esc(u.email)}</div></div></div></td><td style="width:160px">${ev?'<span class="faint">Member</span>':`<select class="select bare" data-ch="member-role" data-id="${u.id}" aria-label="Team role"><option value="member" ${m.r==='member'?'selected':''}>Member</option><option value="maintainer" ${m.r==='maintainer'?'selected':''}>Maintainer</option></select>`}</td><td style="width:44px">${ev?'':`<button class="ib xs" data-a="rm-member" data-id="${u.id}" data-confirm aria-label="Remove" data-tip="Remove">${ic('x',14)}</button>`}</td></tr>`}).join('')}</tbody></table></div>`;
+ else if(tab==='folders')body=folders.length?`<div class="tw-scroll"><table class="t"><tbody>${folders.map(g=>`<tr style="cursor:pointer" data-a="go-node" data-id="${g.node}"><td><div class="row-flex">${ic('folder',16)}<span>${esc(pathOf(g.node))}</span></div></td><td style="width:140px"><span class="chip">${ic(RICON[g.role],12)}${ROLES[g.role]}</span></td></tr>`).join('')}</tbody></table></div>`:`<div class="empty">${ic('folder',22)}</div>`;
+ else body=`<div style="max-width:480px"><div class="field"><label for="team-name">Name</label><input class="input" id="team-name" value="${esc(t.name)}"></div><div class="field"><label for="team-desc">Description</label><textarea class="input" id="team-desc" rows="2">${esc(t.desc||'')}</textarea></div><button class="btn primary" data-a="save-team">${ic('check',15)}<span>Save</span></button>
+ <div class="danger-zone"><div class="grow"><div style="font-weight:500">Delete team</div><div class="muted" style="font-size:12.5px">Removes its grants on ${folders.length} folders</div></div><button class="btn danger" data-a="delete-team" data-confirm>${ic('trash',14)}<span>Delete</span></button></div></div>`;
+ return `<div class="page wide"><div class="ph1"><button class="ib" data-a="go" data-v="teams" aria-label="Back" data-tip="Teams">${ic('back',17)}</button>${tav(t.id,36)}<div><h1 style="font-size:22px">${esc(ev?'Everyone':t.name)}</h1><div class="muted" style="font-size:13px">${esc(t.desc||'')}</div></div></div>
+ <div class="tabs" role="tablist"><button class="${tab==='members'?'on':''}" data-a="team-tab" data-v="members">${ic('users',15)}Members <span class="cnt">${mem.length}</span></button><button class="${tab==='folders'?'on':''}" data-a="team-tab" data-v="folders">${ic('folder',15)}Folders <span class="cnt">${folders.length}</span></button>${ev?'':`<button class="${tab==='settings'?'on':''}" data-a="team-tab" data-v="settings">${ic('cog',15)}Settings</button>`}</div>${body}</div>`}
+function pathOf(id){const out=[];let n=N(id);while(n){out.unshift(n.name);n=n.parent?N(n.parent):null}return '/'+out.join('/')}
+function auditRows(){const F=S.auditF;const range={'24h':DAY,'7d':7*DAY,'30d':30*DAY,all:1e15}[F.range];const q=F.q.toLowerCase();return DB.audit.filter(a=>Date.now()-a.ts<=range&&(!F.actor||a.actor===F.actor)&&(!F.op||a.op===F.op)&&(!F.via||a.via===F.via)&&(!q||(a.node&&pathOf(a.node).toLowerCase().includes(q))))}
+function auditHtml(){const F=S.auditF;const rows=auditRows();const ops=[...new Set(DB.audit.map(a=>a.op))].sort();
+ return `<div class="page wide"><div class="ph1"><h1>Audit <span class="count">${rows.length}</span></h1><div class="grow"></div><button class="btn" data-a="csv">${ic('download',15)}<span>CSV</span></button></div>
+ <div class="bar"><div class="qwrap">${ic('folder',15)}<input class="input" id="audit-q" data-in="audit-q" placeholder="Path" value="${esc(F.q)}"></div>
+ <select class="select" data-ch="audit-actor" aria-label="Person"><option value="">Anyone</option>${DB.users.map(u=>`<option value="${u.id}" ${F.actor===u.id?'selected':''}>${esc(u.name)}</option>`).join('')}</select>
+ <select class="select" data-ch="audit-op" aria-label="Operation"><option value="">Any operation</option>${ops.map(o=>`<option ${F.op===o?'selected':''}>${o}</option>`).join('')}</select>
+ <div class="seg" role="group" aria-label="Source">${[['','All'],['ui','Web'],['rest','API'],['mcp','Agent']].map(([v,l])=>`<button class="${F.via===v?'on':''}" data-a="audit-via" data-v="${v}" aria-label="${l}" data-tip="${l}">${v?ic(VIA[v][0],14):'All'}</button>`).join('')}</div>
+ <div class="seg">${['24h','7d','30d','all'].map(r=>`<button class="${F.range===r?'on':''}" data-a="audit-range" data-v="${r}">${r==='all'?ic('clock',14):r}</button>`).join('')}</div></div>
+ <div class="tw-scroll"><table class="t"><thead><tr><th>Time</th><th>Who</th><th></th><th>Operation</th><th>Target</th><th></th></tr></thead><tbody>${rows.slice(0,120).map(a=>`<tr><td class="num mono" style="font-size:12px">${fmtTime(a.ts)}</td><td><div class="row-flex">${av(a.actor,20)}<span class="ell">${esc(U(a.actor)?.name||'')}</span></div></td><td><span class="faint" data-tip="${VIA[a.via][1]}${a.client?': '+esc(a.client):''}" style="display:inline-flex">${ic(VIA[a.via][0],14)}</span></td><td><code style="font-size:12px">${a.op}</code>${a.v?` <span class="faint">v${a.v}</span>`:''}</td><td class="ell" style="max-width:280px">${a.node&&N(a.node)?esc(pathOf(a.node)):`<span class="muted">${esc(a.detail||'')}</span>`}</td><td>${a.ok?`<span style="color:var(--ok)">${ic('check',14)}</span>`:`<span style="color:var(--danger)" data-tip="${esc(a.detail||'Failed')}">${ic('ban',14)}</span>`}</td></tr>`).join('')}</tbody></table></div></div>`}
+function scopeChips(sc){return sc.map(s=>`<span class="chip ${s==='read'?'':s==='write'?'acc':'warn'}">${s}</span>`).join(' ')}
+function tokensHtml(){return `<div class="page wide"><div class="ph1"><h1>API tokens</h1><div class="grow"></div><button class="btn primary" data-a="mint-open">${ic('plus',15)}<span>Token</span></button></div>
+ ${DB.tokens.length?`<div class="tw-scroll"><table class="t"><thead><tr><th>Name</th><th>Scopes</th><th>Last used</th><th>Expires</th><th></th></tr></thead><tbody>${DB.tokens.map(t=>`<tr><td><div class="row-flex">${ic('key',15)}<span style="font-weight:500">${esc(t.name)}</span></div></td><td>${scopeChips(t.scopes)}</td><td class="num">${t.used?ago(t.used):'-'}</td><td class="num">${t.exp?new Date(t.exp).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'Never'}</td><td style="width:44px"><button class="ib xs" data-a="revoke-token" data-id="${t.id}" data-confirm aria-label="Revoke" data-tip="Revoke">${ic('trash',14)}</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="empty"><span class="eic">${ic('key',22)}</span></div>`}</div>`}
+const CLIENT_C={Claude:'#c96442',ChatGPT:'#10a37f','Copilot Studio':'#6b5bd6'};
+function connsHtml(){return `<div class="page wide"><div class="ph1"><h1>Connections</h1><div class="grow"></div><button class="btn" data-a="consent-preview" data-tip="Preview consent screen">${ic('eye',15)}<span>Consent</span></button></div>
+ <div class="connect"><span class="cic">${ic('plug',19)}</span><div style="min-width:0"><div style="font-weight:600">MCP server</div><div class="muted" style="font-size:12.5px">Claude, ChatGPT, Copilot Studio</div></div><div class="urlbox"><span id="mcp-url">https://skills.contoso.com/mcp</span><button class="ib sm" data-a="copy" data-v="https://skills.contoso.com/mcp" aria-label="Copy" data-tip="Copy">${ic('copy',15)}</button></div></div>
+ ${DB.conns.length?`<div class="tw-scroll"><table class="t"><thead><tr><th>Client</th><th>Scopes</th><th>Last used</th><th>Connected</th><th></th></tr></thead><tbody>${DB.conns.map(c=>`<tr><td><div class="row-flex"><span class="av sq" style="--s:28px;background:${CLIENT_C[c.client]||'var(--muted)'};color:#fff">${esc(c.client[0])}</span><span style="font-weight:500">${esc(c.client)}</span></div></td><td>${scopeChips(c.scopes)}</td><td class="num">${ago(c.used)}</td><td class="num">${ago(c.created)}</td><td style="width:44px"><button class="ib xs" data-a="revoke-conn" data-id="${c.id}" data-confirm aria-label="Revoke" data-tip="Revoke">${ic('trash',14)}</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="empty"><span class="eic">${ic('plug',22)}</span></div>`}</div>`}
+function trashHtml(){const items=DB.nodes.filter(n=>n.deleted&&(!n.parent||alive(n.parent))&&role(n.id)>=4);return `<div class="page"><div class="ph1"><h1>${ic('trash',20)} Trash</h1></div>${items.length?`<div class="items">${items.map(n=>`<div class="item" style="grid-template-columns:20px minmax(0,1fr) auto 32px;cursor:default"><span class="faint">${ic(n.kind==='folder'?'folder':'file',17)}</span><div style="min-width:0"><div class="t ell">${esc(n.name)}</div><div class="d">${esc(pathOf(n.parent||''))}</div></div><span class="w">${ago(n.deleted)}</span><button class="ib xs" data-a="restore" data-id="${n.id}" aria-label="Restore" data-tip="Restore">${ic('undo',14)}</button></div>`).join('')}</div>`:`<div class="empty"><span class="eic">${ic('trash',22)}</span></div>`}</div>`}
+
+/* ---------- screens ---------- */
+const MS=`<svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>`;
+function loginHtml(){return `<div class="screen"><div class="login"><span class="logo">${ic('layers',26)}</span><div><h1>SkillHub</h1><div class="sub">Contoso</div></div><button class="ms" data-a="login">${MS}<span>Sign in with Microsoft</span></button></div></div>`}
+function consentHtml(){const c=S.consentClient;const u=me();return `<div class="screen"><div class="consent">
+ <div class="c-top"><span class="ap" style="background:${CLIENT_C[c]};color:#fff">${esc(c[0])}</span>${ic('arrow',18)}<span class="ap" style="background:var(--accent);color:#fff">${ic('layers',20)}</span></div>
+ <h1>${esc(c)} wants access to SkillHub</h1>
+ <div class="who">${av(u.id,30)}<div class="grow"><div style="font-weight:500">${esc(u.name)}</div><div class="muted" style="font-size:12.5px">${esc(u.email)}</div></div><span class="faint" data-tip="Signed in with Microsoft">${MS}</span></div>
+ <div class="scopes" role="group" aria-label="Permissions">${SCOPES.map(([k,i,t,dsc])=>{const dis=!MAX_SCOPES.includes(k)||(k==='admin'&&!isOwner());const on=S.consentScopes.has(k)&&!dis;return `<label class="scope ${on?'on':''} ${dis?'dis':''}" ${dis?'data-tip="Not allowed by your organization"':''}><span class="sic">${ic(dis?'lock':i,15)}</span><div class="grow"><div class="st">${t}</div><div class="sd">${dsc}</div></div><input type="checkbox" class="cb" data-ch="consent-scope" data-v="${k}" ${on?'checked':''} ${dis?'disabled':''}></label>`}).join('')}</div>
+ <div class="redir">${ic('lock',12)}<span>Returns to claude.ai</span></div>
+ <div class="row-flex" style="margin-top:14px"><button class="btn grow" data-a="consent-deny" style="justify-content:center">Cancel</button><button class="btn primary grow" data-a="consent-allow" style="justify-content:center" ${S.consentScopes.size?'':'disabled'}>Allow</button></div></div></div>`}
+
+/* ---------- menus ---------- */
+function menuHtml(){const M=S.menu;if(!M)return '';const pos=`style="top:${M.y}px;${M.right!=null?`right:${M.right}px`:`left:${M.x}px`}"`;let h='';
+ const mi=(a,icon,label,extra='',cls='')=>`<button class="mi ${cls}" data-a="${a}" ${extra}>${ic(icon,15)}<span>${label}</span></button>`;
+ if(M.type==='versions'){const d=N(M.id);const cur=currentView(d);if(d.draft)h+=`<button class="mi ${cur==='draft'?'on':''}" data-a="view" data-v="draft"><span class="vn dr" style="width:28px;height:20px">${ic('pencil',11)}</span><span>Draft</span><span class="r">${ago(d.draft.ts)}</span></button>`;
+  for(let n=head(d);n>=1;n--)h+=`<button class="mi ${cur===n?'on':''}" data-a="view" data-v="${n}"><span class="vn" style="width:28px;height:20px">v${n}</span><span class="ell" style="max-width:150px">${esc(d.versions[n-1].msg)}</span><span class="r">${n===d.published?`<span style="color:var(--ok)">${ic('check',14)}</span>`:ago(d.versions[n-1].ts)}</span></button>`}
+ else if(M.type==='ctx'){const n=N(M.id);const r=role(n.id),pr=n.parent?role(n.parent):(isOwner()?4:0);
+  if(n.kind==='folder'){if(r>=2)h+=mi('new-doc','file-plus','New document',`data-id="${n.id}"`)+mi('new-folder','folder-plus','New folder',`data-id="${n.id}"`)+'<div class="mhr"></div>'}
+  else h+=mi('go-node','file','Open',`data-id="${n.id}"`);
+  if(r>=2)h+=mi('rename','type','Rename',`data-id="${n.id}"`);if(pr>=4&&n.parent)h+=mi('move-open','move','Move',`data-id="${n.id}"`);if(n.kind==='folder'&&r>=4)h+=mi('share','user-plus','Share',`data-id="${n.id}"`);
+  h+=mi('copy-link','link','Copy link',`data-id="${n.id}"`);if(pr>=4){h+='<div class="mhr"></div>'+mi('delete','trash','Delete',`data-id="${n.id}"`,'dz')}}
+ else if(M.type==='more'){const n=N(M.id);const r=role(n.id),pr=n.parent?role(n.parent):4;if(n.kind==='doc'){h+=mi('copy','bot','Copy agent path',`data-v="${esc(pathOf(n.id))}"`);if(head(n))h+=mi('diff-open','diff','Compare versions',`data-v="${head(n)}"`);if(r>=3&&n.published)h+=mi('unpublish','eye-off','Unpublish',`data-id="${n.id}"`)}
+  if(r>=2)h+=mi('rename','type','Rename',`data-id="${n.id}"`);if(pr>=4&&n.parent)h+=mi('move-open','move','Move',`data-id="${n.id}"`);if(n.kind==='folder'&&isOwner())h+=mi('export','download','Export',`data-id="${n.id}"`);if(pr>=4)h+='<div class="mhr"></div>'+mi('delete','trash','Delete',`data-id="${n.id}"`,'dz')}
+ else if(M.type==='user'){const u=me();h+=`<div class="row-flex" style="padding:8px 9px 10px">${av(u.id,32)}<div style="min-width:0"><div style="font-weight:500">${esc(u.name)}</div><div class="muted ell" style="font-size:12px">${esc(u.email)}</div></div></div><div class="mhr"></div>`;
+  if(isOwner())h+=mi('go','user','People','data-v="people"')+mi('go','users','Teams','data-v="teams"')+mi('go','activity','Audit','data-v="audit"')+'<div class="mhr"></div>';
+  h+=mi('go','key','API tokens','data-v="tokens"')+mi('go','plug','Connections','data-v="connections"')+mi('theme',isDark()?'sun':'moon',isDark()?'Light':'Dark')+'<div class="mhr"></div>'+mi('logout','logout','Sign out')}
+ else if(M.type==='dev'){h+='<div class="mlbl">Act as</div>'+PRESETS.map(([id,l])=>`<button class="mi ${S.me===id?'on':''}" data-a="act-as" data-id="${id}">${av(id,20)}<span>${l}</span><span class="r">${esc(U(id).name.split(' ')[0])}</span></button>`).join('')+'<div class="mhr"></div><div class="mlbl">Screens</div>'+mi('logout','logout','Sign-in')+mi('consent-preview','plug','MCP consent')}
+ return `<div class="menu" ${pos} role="menu">${h}</div>`}
+function openMenu(type,el,id,at){const r=el?el.getBoundingClientRect():null;const W=innerWidth;let M={type,id};if(at){M.x=Math.min(at.x,W-240);M.y=Math.min(at.y,innerHeight-300)}else if(r){if(r.left>W/2){M.right=Math.max(8,W-r.right)}else M.x=r.left;M.y=r.bottom+6}S.menu=M}
+
+/* ---------- modals ---------- */
+function modalHtml(){const M=S.modal;if(!M)return '';let inner='';const close=`<button class="ib sm" data-a="close-modal" aria-label="Close">${ic('x',16)}</button>`;
+ if(M.type==='palette'){const items=palItems(M.q);M.items=items;return `<div class="modal-wrap"><div class="modal-scrim" data-a="close-modal"></div><div class="modal pal" role="dialog" aria-label="Quick open"><div class="pal-in">${ic('search',17)}<input id="pal" data-in="pal" value="${esc(M.q)}" placeholder="Jump to" autocomplete="off"><kbd>Esc</kbd></div><div class="pal-list">${items.map((it,i)=>`<button class="pi ${i===M.i?'on':''}" data-a="pal-go" data-i="${i}">${ic(it.icon,16)}<span>${it.hl}</span><span class="ps">${esc(it.sub||'')}</span></button>`).join('')||`<div class="empty" style="padding:24px 0">${ic('search',18)}</div>`}</div></div></div>`}
+ if(M.type==='commit'){const d=N(S.sel);const ops=lineDiff(head(d)?vContent(d,head(d)):'',d.draft?d.draft.content:'');const cp=role(d.id)>=3;
+  inner=`<div class="mh"><h2>${ic('commit',17)}Commit v${head(d)+1}</h2>${statHtml(ops)}${close}</div><div class="modal-body"><textarea class="input" id="commit-msg" rows="3" placeholder="What changed?" style="width:100%">${esc(M.msg||'')}</textarea>${cp?`<label class="row-flex" style="margin-top:12px;cursor:pointer"><span class="switch"><input type="checkbox" id="commit-pub" ${M.pub?'checked':''} data-ch="commit-pub"><span></span></span>${ic('rocket',15)}<span>Publish now</span></label>`:''}</div><div class="mf"><span class="faint" style="font-size:12px">Ctrl Enter</span><div class="grow"></div><button class="btn" data-a="close-modal">Cancel</button><button class="btn primary" data-a="commit">${ic('commit',15)}<span>Commit</span></button></div>`}
+ if(M.type==='publish'){const d=N(S.sel);const p=d.published;const v=M.v;const ops=lineDiff(p?vContent(d,p):'',vContent(d,v));
+  inner=`<div class="mh"><h2>${ic('rocket',17)}Publish</h2>${close}</div><div class="modal-body"><div class="vchips">${d.versions.slice().reverse().map(x=>`<button class="vchip ${x.n===v?'on':''}" data-a="pub-v" data-v="${x.n}">v${x.n}${x.n===p?ic('check',13):''}</button>`).join('')}</div>
+  ${d.draft?`<div class="note">${ic('alert',14)}<span class="grow">Draft changes are not included</span><button class="btn sm" data-a="commit-open">Commit</button></div>`:''}
+  <div class="row-flex muted" style="font-size:12.5px;margin:6px 0 8px">${p?'v'+p:ic('eye-off',13)}${ic('arrow',13)}v${v}<div class="grow"></div>${statHtml(ops)}</div>${diffHtml(ops)}</div>
+  <div class="mf">${p?`<button class="btn ghost danger" data-a="unpublish" data-id="${d.id}" data-confirm data-tip="Unpublish">${ic('eye-off',15)}</button>`:''}<div class="grow"></div><button class="btn" data-a="close-modal">Cancel</button><button class="btn primary" data-a="publish" ${v===p?'disabled':''}>${ic(v<(p||0)?'undo':'rocket',15)}<span>${v===p?'Published':v<(p||0)?'Roll back to v'+v:'Publish v'+v}</span></button></div>`;inner=`<div class="modal lg" role="dialog">${inner}</div>`;return wrap(inner,true)}
+ if(M.type==='diff'){const d=N(S.sel);const opts=[...(d.draft?[['draft','Draft']]:[]),...d.versions.slice().reverse().map(x=>[x.n,'v'+x.n])];const sel=(id,val)=>`<select class="select" data-ch="${id}">${opts.map(([v,l])=>`<option value="${v}" ${String(v)===String(val)?'selected':''}>${l}${v===d.published?' (published)':''}</option>`).join('')}</select>`;
+  const ops=lineDiff(M.a===0?'':vContent(d,M.a),vContent(d,M.b));
+  inner=`<div class="mh"><h2>${ic('diff',17)}Compare</h2>${close}</div><div class="modal-body"><div class="row-flex" style="margin-bottom:12px">${M.a===0?'<span class="chip">Empty</span>':sel('diff-a',M.a)}${ic('arrow',14)}${sel('diff-b',M.b)}<div class="grow"></div>${statHtml(ops)}</div>${diffHtml(ops)}</div>`;return wrap(`<div class="modal lg" role="dialog">${inner}</div>`,true)}
+ if(M.type==='share')return wrap(`<div class="modal" role="dialog">${shareHtml(M)}</div>`,true);
+ if(M.type==='move'){const n=N(M.id);const fs=DB.nodes.filter(f=>f.kind==='folder'&&alive(f.id)&&role(f.id)>=4&&!isDesc(f.id,n.id));const depth=f=>{let d=0,x=f;while(x.parent){d++;x=N(x.parent)}return d};const ord=f=>pathOf(f.id).toLowerCase();fs.sort((a,b)=>ord(a).localeCompare(ord(b)));
+  inner=`<div class="mh"><h2>${ic('move',17)}Move ${esc(n.name)}</h2>${close}</div><div class="modal-body">${fs.map(f=>`<button class="mi ${M.dest===f.id?'on':''}" data-a="move-pick" data-id="${f.id}" style="padding-left:${10+depth(f)*18}px" ${f.id===n.parent?'disabled style="opacity:.45;padding-left:'+(10+depth(f)*18)+'px"':''}>${ic('folder',15)}<span>${esc(f.name)}</span>${f.id===n.parent?`<span class="r">${ic('check',13)}</span>`:''}</button>`).join('')}</div><div class="mf"><div class="grow"></div><button class="btn" data-a="close-modal">Cancel</button><button class="btn primary" data-a="move" ${M.dest?'':'disabled'}>${ic('move',15)}<span>Move</span></button></div>`}
+ if(M.type==='csv'){inner=`<div class="mh"><h2>${ic('download',17)}audit.csv</h2>${close}</div><div class="modal-body"><textarea class="input mono" id="csv" rows="12" readonly style="width:100%;font-size:12px;white-space:pre">${esc(M.csv)}</textarea></div><div class="mf"><span class="faint" style="font-size:12px">${M.n} rows</span><div class="grow"></div><button class="btn primary" data-a="copy" data-v="__csv">${ic('copy',15)}<span>Copy</span></button></div>`;return wrap(`<div class="modal lg">${inner}</div>`,true)}
+ if(M.type==='export'){inner=`<div class="mh"><h2>${ic('download',17)}Export ${esc(N(M.id).name)}</h2>${close}</div><div class="modal-body"><div class="muted" style="font-size:13px;margin-bottom:10px">Published versions as a zip with relative image links.</div><div class="tokbox">${ic('file',15)}<span class="grow">${esc(N(M.id).name.replace(/^_/,''))}-${new Date().toISOString().slice(0,10)}.zip</span></div></div><div class="mf"><div class="grow"></div><button class="btn primary" data-a="export-go">${ic('download',15)}<span>Download</span></button></div>`}
+ if(M.type==='mint'){inner=`<div class="mh"><h2>${ic('key',17)}New token</h2>${close}</div><div class="modal-body"><div class="field"><label for="mint-name">Name</label><input class="input" id="mint-name" placeholder="ci-sync" value="${esc(M.name||'')}" data-in="mint-name" autocomplete="off"></div><div class="field"><label>Scopes</label><div class="scopes">${SCOPES.map(([k,i,t,dsc])=>{const dis=k==='admin'&&!isOwner();const on=M.scopes.has(k);return `<label class="scope ${on?'on':''} ${dis?'dis':''}"><span class="sic">${ic(i,15)}</span><div class="grow"><div class="st">${t}</div><div class="sd">${dsc}</div></div><input type="checkbox" class="cb" data-ch="mint-scope" data-v="${k}" ${on?'checked':''} ${dis?'disabled':''}></label>`}).join('')}</div></div><div class="field"><label for="mint-exp">Expires</label><select class="select" id="mint-exp" data-ch="mint-exp">${[['30','30 days'],['90','90 days'],['365','1 year'],['0','Never']].map(([v,l])=>`<option value="${v}" ${M.exp===v?'selected':''}>${l}</option>`).join('')}</select></div></div><div class="mf"><div class="grow"></div><button class="btn" data-a="close-modal">Cancel</button><button class="btn primary" data-a="mint" ${M.name&&M.scopes.size?'':'disabled'}>${ic('key',15)}<span>Create</span></button></div>`}
+ if(M.type==='reveal'){inner=`<div class="mh"><h2>${ic('key',17)}${esc(M.name)}</h2>${close}</div><div class="modal-body"><div class="tokbox"><span class="grow">${esc(M.token)}</span><button class="ib sm" data-a="copy" data-v="${esc(M.token)}" aria-label="Copy" data-tip="Copy">${ic('copy',15)}</button></div><div class="note" style="margin-top:12px">${ic('eye-off',14)}<span>Shown once</span></div></div><div class="mf"><div class="grow"></div><button class="btn primary" data-a="close-modal">Done</button></div>`}
+ return wrap(`<div class="modal sm" role="dialog">${inner}</div>`,true)}
+const wrap=(inner)=>`<div class="modal-wrap"><div class="modal-scrim" data-a="close-modal"></div>${inner}</div>`;
+function shareHtml(M){const f=N(M.id);const grants=chainGrants(f);const direct=grants.filter(x=>!x.from),inh=grants.filter(x=>x.from);
+ const q=(M.q||'').toLowerCase();const cands=q?[...DB.teams.map(t=>({type:'team',id:t.id,name:pname('team',t.id),sub:teamCount(t)+' members'})),...DB.users.filter(u=>u.status==='active').map(u=>({type:'user',id:u.id,name:u.name,sub:u.email}))].filter(c=>(c.name+' '+c.sub).toLowerCase().includes(q)).slice(0,6):[];
+ const roleSel=(attr,val,rm)=>`<select class="select bare" ${attr} aria-label="Role">${[1,2,3,4].map(r=>`<option value="${r}" ${val===r?'selected':''}>${ROLES[r]}</option>`).join('')}${rm?'<option disabled>──────</option><option value="remove">Remove</option>':''}</select>`;
+ const parent=f.parent?N(f.parent):null;const chk=M.check?explain(M.check,f.id):null;const cq=(M.cq||'').toLowerCase();
+ return `<div class="mh"><h2>${ic('folder',17)}<span class="ell">Share ${esc(f.name)}</span></h2><button class="ib sm" data-a="copy-link" data-id="${f.id}" aria-label="Copy link" data-tip="Copy link">${ic('link',16)}</button><button class="ib sm" data-a="close-modal" aria-label="Close">${ic('x',16)}</button></div>
+ <div class="modal-body">
+ <div class="addrow">${M.pick?`<div class="picked">${pav(M.pick.type,M.pick.id,24)}<span class="grow ell">${esc(pname(M.pick.type,M.pick.id))}</span><button class="ib xs" data-a="unpick" aria-label="Clear">${ic('x',13)}</button></div>`:`<input class="input" id="share-q" data-in="share-q" placeholder="Add people or teams" value="${esc(M.q||'')}" autocomplete="off">`}
+ ${roleSel('data-ch="share-role" style="border:1px solid var(--border-2);height:34px"',M.role||1,false)}<button class="btn primary" data-a="grant" ${M.pick?'':'disabled'}>Add</button>
+ ${cands.length&&!M.pick?`<div class="sugg">${cands.map(c=>`<button class="mi" data-a="pick" data-t="${c.type}" data-id="${c.id}">${pav(c.type,c.id,24)}<span>${esc(c.name)}</span><span class="r">${esc(c.sub)}</span></button>`).join('')}</div>`:''}</div>
+ <div class="sec" style="margin-left:0">People with access</div>
+ ${direct.map(({g})=>`<div class="prow" style="padding-left:0">${pav(g.type,g.pid,32)}<div class="grow"><div class="pn">${esc(pname(g.type,g.pid))}</div><div class="ps">${g.type==='team'?teamCount(T(g.pid))+' members':esc(U(g.pid).email)}</div></div>${roleSel(`data-ch="grant-role" data-gid="${g.id}"`,g.role,true)}</div>`).join('')}
+ ${inh.map(({g,from})=>`<div class="prow inh" style="padding-left:0" data-tip="Change it on ${esc(from.name)}">${pav(g.type,g.pid,32)}<div class="grow"><div class="pn">${esc(pname(g.type,g.pid))}</div><div class="ps">from ${esc(from.name)}</div></div><span class="rl" style="padding-right:10px">${ROLES[g.role]}</span></div>`).join('')}
+ ${!grants.length?`<div class="prow faint" style="padding-left:0">${ic('lock',16)}<span>Owners only</span></div>`:''}
+ ${parent?`<label class="row-flex" style="margin-top:14px;padding:10px 0;border-top:1px solid var(--border);cursor:pointer"><span class="switch"><input type="checkbox" data-ch="inherit" ${f.inherit?'checked':''} aria-label="Inherit access"><span></span></span><span class="grow">Inherit from ${esc(parent.name)}</span>${f.inherit?'':`<span class="chip warn">${ic('link-off',11)}</span>`}</label>`:''}
+ <div style="border-top:1px solid var(--border);padding-top:12px;margin-top:${parent?0:14}px;position:relative"><div class="qwrap" style="max-width:none">${ic('user-check',15)}<input class="input" id="check-q" data-in="check-q" placeholder="Check access for" value="${esc(M.cq||'')}" autocomplete="off"></div>
+ ${cq&&!M.check?`<div class="sugg" style="top:50px">${DB.users.filter(u=>(u.name+u.email).toLowerCase().includes(cq)).slice(0,5).map(u=>`<button class="mi" data-a="check-pick" data-id="${u.id}">${av(u.id,22)}<span>${esc(u.name)}</span></button>`).join('')||'<div class="mi faint">No one</div>'}</div>`:''}
+ ${chk?`<div class="prow" style="padding-left:0;margin-top:8px">${av(M.check,32)}<div class="grow"><div class="pn">${esc(U(M.check).name)}</div><div class="ps">${esc(chk.why)}</div></div><span class="chip ${chk.r?'acc':'bad'}">${ic(RICON[chk.r],12)}${ROLES[chk.r]}</span></div>`:''}</div>
+ </div><div class="mf"><div class="grow"></div><button class="btn primary" data-a="close-modal">Done</button></div>`}
+function palItems(q){const ql=q.toLowerCase().trim();const fz=(s)=>{if(!ql)return{ok:true,h:esc(s),sc:0};const lo=s.toLowerCase();const k=lo.indexOf(ql);if(k>=0)return{ok:true,sc:100-k,h:esc(s.slice(0,k))+'<mark>'+esc(s.slice(k,k+ql.length))+'</mark>'+esc(s.slice(k+ql.length))};let j=0,h='';for(const c of s){if(j<ql.length&&c.toLowerCase()===ql[j]){h+='<mark>'+esc(c)+'</mark>';j++}else h+=esc(c)}return{ok:j===ql.length,sc:10,h}};
+ const out=[];for(const n of DB.nodes){if(!canRead(n.id))continue;const m=fz(n.name);if(m.ok)out.push({icon:n.kind==='folder'?'folder':'file',hl:m.h,sc:m.sc+(n.kind==='doc'?5:0),sub:visPathStr(n.parent),go:()=>goNode(n.id)})}
+ const acts=[['file-plus','New document',()=>{const f=curFolder();if(f&&role(f)>=2)newDoc(f);else toast('Open a folder you can edit first')}],['moon','Toggle theme',toggleTheme],['key','API tokens',()=>go('tokens')],['plug','Connections',()=>go('connections')]];
+ if(isOwner())acts.push(['user','People',()=>go('people')],['users','Teams',()=>go('teams')],['activity','Audit',()=>go('audit')]);
+ for(const[i,l,f]of acts){const m=fz(l);if(m.ok&&ql)out.push({icon:i,hl:m.h,sc:m.sc-20,sub:'',go:f})}out.sort((a,b)=>b.sc-a.sc);return out.slice(0,12)}
+
+/* ---------- actions ---------- */
+function go(v){S.view=v;S.menu=null;S.modal=null;S.mTree=false;S.editing=false;S.selUsers.clear();render()}
+function curFolder(){const n=N(S.sel);if(!n)return null;return n.kind==='folder'?n.id:n.parent}
+function goNode(id){const n=N(id);if(!n)return;if(S.editing)leaveEdit();S.view='files';S.sel=id;S.viewing=null;S.menu=null;S.modal=null;S.searchOpen=false;S.mTree=false;let p=n.parent;while(p){S.open.add(p);p=N(p).parent}if(n.kind==='folder')S.open.add(id);if(n.kind==='doc'&&role(id)>=1&&S.drawer==null&&!narrow())S.drawer=role(id)>=2?'history':'access';render()}
+function toast(msg,o={}){const el=document.createElement('div');el.className='toast '+(o.kind||'');el.setAttribute('role','status');el.innerHTML=`${o.icon?ic(o.icon,16,o.warn?'tw2':''):''}<span>${esc(msg)}</span>${o.sub?`<span class="tsub">${esc(o.sub)}</span>`:''}${o.undo?`<button class="tbtn">${ic('undo',13)}<span>Undo</span></button>`:''}`;if(o.undo)el.querySelector('.tbtn').onclick=()=>{o.undo();el.remove();render()};$('#toasts').appendChild(el);requestAnimationFrame(()=>el.classList.add('in'));setTimeout(()=>{el.classList.remove('in');setTimeout(()=>el.remove(),250)},o.undo?6500:2800)}
+function copy(text){const done=()=>toast('Copied',{icon:'check'});try{navigator.clipboard.writeText(text).then(done).catch(()=>toast('Select and copy manually',{icon:'alert'}))}catch(e){toast('Select and copy manually',{icon:'alert'})}}
+function isDark(){const t=document.documentElement.dataset.theme;if(t)return t==='dark';return window.matchMedia('(prefers-color-scheme: dark)').matches}
+function toggleTheme(){const d=!isDark();document.documentElement.dataset.theme=d?'dark':'light';store.set('sh-theme',d?'dark':'light');S.menu=null;render()}
+function readersOf(id){return DB.users.filter(u=>u.status==='active').map(u=>canReadAs(u.id,id)?1:0).join('')}
+function moveNode(id,dest){const n=N(id),prev=n.parent;if(DB.nodes.some(x=>x.parent===dest&&x.id!==id&&alive(x.id)&&x.name.toLowerCase()===n.name.toLowerCase())){toast('Name already used there',{icon:'alert',kind:'bad'});return}const before=readersOf(id);n.parent=dest;const after=readersOf(id);const changed=[...before].filter((c,i)=>c!==after[i]).length;S.open.add(dest);log('move_node',id);
+ toast('Moved to '+N(dest).name,{icon:changed?'alert':'move',warn:!!changed,sub:changed?`access changed for ${changed}`:'',undo:()=>{n.parent=prev;log('move_node',id)}});render()}
+function delNode(id){const n=N(id);n.deleted=Date.now();n.deletedBy=S.me;log('delete_node',id);if(isDesc(S.sel,id))S.sel=n.parent;toast('Deleted '+n.name,{icon:'trash',undo:()=>{n.deleted=null;log('restore_node',id)}});render()}
+function newDoc(fid){const id=nid('d');const name=uniqueName(fid,'untitled');DB.nodes.push({id,parent:fid,kind:'doc',name,versions:[],published:null,draft:null,by:S.me,created:Date.now()});log('create_doc',id);S.open.add(fid);S.sel=id;S.view='files';S.menu=null;S.modal=null;startEdit();S.focusNext='#ed-name';render()}
+function newFolder(pid){const id=nid('f');DB.nodes.push({id,parent:pid||null,kind:'folder',name:uniqueName(pid||null,'New folder'),inherit:1,by:S.me,created:Date.now()});log('create_folder',id);if(pid)S.open.add(pid);S.renaming=id;S.menu=null;S.focusNext='#rn';render()}
+function commitRename(){const id=S.renaming;if(!id)return;const el=$('#rn');S.renaming=null;const n=N(id);const v=el?el.value.trim():n.name;if(v&&v!==n.name){if(v.includes('/')||v.length>120)toast('No slashes, max 120 characters',{icon:'alert',kind:'bad'});else if(DB.nodes.some(x=>x.parent===n.parent&&x.id!==id&&alive(x.id)&&x.name.toLowerCase()===v.toLowerCase()))toast('Name already used here',{icon:'alert',kind:'bad'});else{n.name=v;log('rename_node',id)}}render()}
+/* editor */
+function startEdit(){const d=N(S.sel);if(!d||role(d.id)<2)return;const{fm,body,rest}=splitFM(latestContent(d));S.edit={id:d.id,name:fm?.name||'',desc:fm?.description||'',rest,body,raw:false,save:'saved',dirty:false,logged:false};S.editing=true;S.viewing='draft';S.menu=null}
+function syncEditor(){if(!S.edit)return;const b=$('#ed-body');if(b&&S.edit.dirty){S.edit.body=htmlToMd(b);S.edit.dirty=false}const r=$('#ed-raw');if(r)S.edit.body=r.value}
+let saveT=null;
+function scheduleSave(){if(!S.edit)return;S.edit.save='pending';setSaveIcon();clearTimeout(saveT);saveT=setTimeout(flush,2000)}
+function setSaveIcon(){const e=$('#save-ic');if(e){e.innerHTML=saveIcon();e.className='save '+(S.edit.save==='saved'?'ok':'');e.dataset.tip=S.edit.save==='saved'?'Saved to draft':'Saving'}}
+function flush(){clearTimeout(saveT);if(!S.editing||!S.edit)return;syncEditor();const E=S.edit;const d=N(E.id);const content=buildFM(E.name,E.desc,E.rest)+E.body;const base=latestContent(d);if(content===base){E.save='saved';setSaveIcon();return}
+ E.save='saving';setSaveIcon();if(!d.draft)d.draft={base:head(d)};Object.assign(d.draft,{content,by:S.me,ts:Date.now(),etag:nid('e')});if(!E.logged){log('update_draft',d.id);E.logged=true}
+ setTimeout(()=>{if(S.edit===E){E.save='saved';setSaveIcon()}const tb=$('#tree-body');if(tb){const st=tb.scrollTop;tb.innerHTML=treeRows(roots(),0);tb.scrollTop=st}},350)}
+function leaveEdit(){flush();S.editing=false;const d=N(S.edit.id);S.viewing=d&&d.draft?'draft':null;S.edit=null}
+function openCommit(){flush();const d=N(S.sel);if(!d.draft){toast('No changes to commit',{icon:'check'});return}const err=fmError(S.edit||splitFMtoE(d.draft.content));if(err){toast(err,{icon:'alert',kind:'bad'});return}S.modal={type:'commit',msg:'',pub:false};S.focusNext='#commit-msg';render()}
+function splitFMtoE(c){const{fm}=splitFM(c);return{name:fm?.name||'',desc:fm?.description||''}}
+function doCommit(){const d=N(S.sel);const msg=($('#commit-msg')?.value||'').trim()||'Update';const pub=S.modal?.pub;if(!d.draft)return;const c=d.draft.content;const n=head(d)+1;d.versions.push({n,content:c,msg,by:S.me,ts:Date.now()});d.draft=null;const{fm}=splitFM(c);if(/^untitled(-\d+)?$/.test(d.name)&&fm&&fm.name)d.name=uniqueName(d.parent,fm.name,d.id);log('commit_version',d.id,n);S.editing=false;S.edit=null;S.modal=null;S.viewing=null;
+ if(pub){const prev=d.published;d.published=n;log('publish_version',d.id,n);toast('Published v'+n,{icon:'rocket',undo:()=>{d.published=prev;log('publish_version',d.id,prev)}})}else toast('Committed v'+n,{icon:'commit'});render()}
+function insertImage(file){if(!file)return;if(file.type==='image/svg+xml'){toast('SVG is not allowed',{icon:'alert',kind:'bad'});return}if(!/^image\/(png|jpeg|webp|gif)$/.test(file.type)){toast('PNG, JPEG, WebP or GIF',{icon:'alert',kind:'bad'});return}if(file.size>5*1024*1024){toast('Max 5 MB',{icon:'alert',kind:'bad'});return}
+ const rd=new FileReader();rd.onload=()=>{const id=nid('a');DB.assets[id]={data:rd.result,name:file.name};const alt=file.name.replace(/\.[^.]+$/,'').replace(/[-_]+/g,' ');const md=`![${alt}](asset://${id})`;
+  if(S.edit.raw){const r=$('#ed-raw');const p=r.selectionStart??r.value.length;r.value=r.value.slice(0,p)+'\n'+md+'\n'+r.value.slice(p);S.edit.body=r.value}else{const b=$('#ed-body');b.focus();if(!document.execCommand('insertHTML',false,imgHtml(alt,'asset://'+id,true)+'<p><br></p>'))b.insertAdjacentHTML('beforeend',imgHtml(alt,'asset://'+id,true));S.edit.dirty=true}
+  scheduleSave();toast('Image added',{icon:'image'})};rd.readAsDataURL(file)}
+function fmtCmd(c){const b=$('#ed-body');if(!b)return;b.focus();const m={h2:['formatBlock','h2'],bold:['bold'],italic:['italic'],ul:['insertUnorderedList'],ol:['insertOrderedList'],quote:['formatBlock','blockquote'],code:['formatBlock','pre']}[c];if(m)document.execCommand(m[0],false,m[1]||null);S.edit.dirty=true;scheduleSave()}
+function arm(el){el.classList.add('armed');const orig=el.innerHTML;el.innerHTML=ic('check',14)+'<span>Sure?</span>';setTimeout(()=>{if(document.body.contains(el)){el.classList.remove('armed');el.innerHTML=orig}},3000)}
+
+function act(a,ds,e,el,prevMenu){const d=N(S.sel);
+ switch(a){
+ case 'sel':{const n=N(ds.id);if(S.renaming===ds.id)return;if(n.kind==='folder'&&S.sel===ds.id&&S.view==='files'){S.open.has(n.id)?S.open.delete(n.id):S.open.add(n.id);render();return}if(n.kind==='folder')S.open.add(n.id);goNode(ds.id);return}
+ case 'tw':{S.open.has(ds.id)?S.open.delete(ds.id):S.open.add(ds.id);render();return}
+ case 'go-node':return goNode(ds.id);
+ case 'go':return go(ds.v);
+ case 'collapse':S.open.clear();render();return;
+ case 'menu':{if(prevMenu&&prevMenu.type===ds.m&&prevMenu.id===(ds.id||S.sel)){S.menu=null}else openMenu(ds.m,el,ds.id||S.sel);render();return}
+ case 'ctx-btn':{if(prevMenu&&prevMenu.type==='ctx'&&prevMenu.id===ds.id){S.menu=null}else openMenu('ctx',el,ds.id);render();return}
+ case 'scrim':S.mTree=false;if(narrow())S.drawer=null;render();return;
+ case 'm-tree':S.mTree=!S.mTree;render();return;
+ case 'drawer':S.drawer=S.drawer?null:(N(S.sel).kind==='doc'&&role(S.sel)>=2?'history':'access');render();return;
+ case 'drawer-close':S.drawer=null;render();return;
+ case 'dtab':S.drawer=ds.v;render();return;
+ case 'view':{S.viewing=ds.v==='draft'?'draft':+ds.v;S.menu=null;if(S.editing)leaveEdit();if(narrow())S.drawer=null;render();return}
+ case 'edit':startEdit();S.menu=null;render();if(!S.edit.raw)$('#ed-body')?.focus();return;
+ case 'edit-close':leaveEdit();render();return;
+ case 'raw':syncEditor();S.edit.raw=!S.edit.raw;render();(S.edit.raw?$('#ed-raw'):$('#ed-body'))?.focus();return;
+ case 'fmt':return fmtCmd(ds.cmd);
+ case 'img':$('#file').click();return;
+ case 'discard':{const dd=N(S.sel);const prev=dd.draft;dd.draft=null;S.editing=false;S.edit=null;S.viewing=null;log('discard_draft',dd.id);toast('Draft discarded',{icon:'trash',undo:()=>{dd.draft=prev}});render();return}
+ case 'commit-open':S.modal=null;return openCommit();
+ case 'commit':return doCommit();
+ case 'publish-open':{if(S.editing)leaveEdit();const v=ds.v?+ds.v:head(d);S.modal={type:'publish',v};S.menu=null;render();return}
+ case 'pub-v':S.modal.v=+ds.v;render();return;
+ case 'publish':{const v=S.modal.v;const prev=d.published;d.published=v;log('publish_version',d.id,v);S.modal=null;S.viewing=null;toast((v<(prev||0)?'Rolled back to v':'Published v')+v,{icon:'rocket',undo:()=>{d.published=prev;log('publish_version',d.id,prev)}});render();return}
+ case 'unpublish':{const dd=N(ds.id||S.sel);const prev=dd.published;dd.published=null;log('unpublish',dd.id,prev);S.modal=null;S.menu=null;toast('Unpublished',{icon:'eye-off',undo:()=>{dd.published=prev}});render();return}
+ case 'diff-open':{if(S.editing)leaveEdit();const dd=N(S.sel);const b=ds.v==='draft'?'draft':+ds.v;const a=b==='draft'?(head(dd)||0):(b>1?b-1:0);S.modal={type:'diff',a,b};S.menu=null;render();return}
+ case 'share':{const n=N(ds.id||S.sel);const f=n.kind==='doc'?n.parent:n.id;S.modal={type:'share',id:f,role:1,q:'',pick:null};S.menu=null;S.focusNext='#share-q';render();return}
+ case 'pick':S.modal.pick={type:ds.t,id:ds.id};S.modal.q='';render();return;
+ case 'unpick':S.modal.pick=null;S.focusNext='#share-q';render();return;
+ case 'grant':{const M=S.modal;const ex=DB.grants.find(g=>g.node===M.id&&g.type===M.pick.type&&g.pid===M.pick.id);if(ex)ex.role=M.role||1;else DB.grants.push({id:nid('g'),node:M.id,type:M.pick.type,pid:M.pick.id,role:M.role||1,by:S.me,ts:Date.now()});log('grant_access',M.id);toast('Shared with '+pname(M.pick.type,M.pick.id),{icon:'user-plus'});M.pick=null;S.focusNext='#share-q';render();return}
+ case 'check-pick':S.modal.check=ds.id;S.modal.cq=U(ds.id).name;render();return;
+ case 'copy-link':S.menu=null;render();return copy('https://skills.contoso.com/'+(N(ds.id||S.sel).kind==='doc'?'d/':'f/')+(ds.id||S.sel));
+ case 'copy':return copy(ds.v==='__csv'?S.modal.csv:ds.v);
+ case 'new-doc':{const f=ds.id||curFolder();if(f)newDoc(f);return}
+ case 'new-folder':return newFolder(ds.id||null);
+ case 'rename':{const n=N(ds.id);S.menu=null;S.open.add(n.parent);S.view='files';S.renaming=ds.id;S.focusNext='#rn';if(narrow())S.mTree=true;render();return}
+ case 'delete':S.menu=null;return delNode(ds.id);
+ case 'restore':{const n=N(ds.id);n.deleted=null;log('restore_node',n.id);toast('Restored '+n.name,{icon:'undo'});render();return}
+ case 'move-open':S.modal={type:'move',id:ds.id,dest:null};S.menu=null;render();return;
+ case 'move-pick':S.modal.dest=ds.id;render();return;
+ case 'move':{const M=S.modal;S.modal=null;moveNode(M.id,M.dest);return}
+ case 'export':S.modal={type:'export',id:ds.id};S.menu=null;log('export_tree',ds.id);render();return;
+ case 'export-go':S.modal=null;toast('Export ready',{icon:'download',sub:'downloads are disabled in this preview'});render();return;
+ case 'close-modal':S.modal=null;render();return;
+ case 'palette':return openPalette();
+ case 'pal-go':{const it=S.modal.items[+ds.i];S.modal=null;it.go();render();return}
+ case 'theme':return toggleTheme();
+ case 'logout':S.screen='login';S.menu=null;render();return;
+ case 'login':S.screen='app';log('login');render();return;
+ case 'act-as':{if(S.editing)leaveEdit();S.me=ds.id;S.menu=null;if(!isOwner()&&['people','teams','team','audit'].includes(S.view))S.view='files';if(!canRead(S.sel)){const first=DB.nodes.find(n=>n.kind==='doc'&&canRead(n.id));S.sel=first?first.id:null}S.viewing=null;toast('Acting as '+U(ds.id).name,{icon:'user'});render();return}
+ case 'consent-preview':S.screen='consent';S.menu=null;S.consentScopes=new Set(['read','write']);render();return;
+ case 'consent-deny':S.screen='app';render();return;
+ case 'consent-allow':{const sc=[...S.consentScopes].filter(s=>MAX_SCOPES.includes(s));const ex=DB.conns.find(c=>c.client===S.consentClient);if(ex){ex.scopes=sc;ex.used=Date.now()}else DB.conns.unshift({id:nid('c'),client:S.consentClient,scopes:sc,created:Date.now(),used:Date.now()});S.screen='app';S.view='connections';toast(S.consentClient+' connected',{icon:'plug'});render();return}
+ case 'revoke-conn':{const i=DB.conns.findIndex(c=>c.id===ds.id);const c=DB.conns[i];DB.conns.splice(i,1);log('revoke_mcp_connection',null);toast(c.client+' disconnected',{icon:'plug',undo:()=>DB.conns.splice(i,0,c)});render();return}
+ case 'mint-open':S.modal={type:'mint',name:'',scopes:new Set(['read']),exp:'90'};S.focusNext='#mint-name';render();return;
+ case 'mint':{const M=S.modal;const abc='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let t='shk_';const a=new Uint32Array(40);crypto.getRandomValues(a);for(const x of a)t+=abc[x%abc.length];DB.tokens.unshift({id:nid('k'),name:M.name,scopes:SCOPES.map(s=>s[0]).filter(s=>M.scopes.has(s)),created:Date.now(),used:null,exp:M.exp==='0'?null:Date.now()+(+M.exp)*DAY});log('mint_api_token',null);S.modal={type:'reveal',name:M.name,token:t};render();return}
+ case 'revoke-token':{const i=DB.tokens.findIndex(t=>t.id===ds.id);const t=DB.tokens[i];DB.tokens.splice(i,1);log('revoke_api_token',null);toast('Revoked '+t.name,{icon:'key'});render();return}
+ case 'user-status':{const u=U(ds.id);u.status=u.status==='active'?'suspended':'active';log('set_user_status',null,null,{detail:u.name+' '+u.status});toast(u.name+(u.status==='active'?' reactivated':' suspended'),{icon:u.status==='active'?'check':'ban'});render();return}
+ case 'bulk':{if(ds.v==='clear'){S.selUsers.clear()}else{for(const id of S.selUsers){const u=U(id);u.status=ds.v==='suspend'?'suspended':'active';log('set_user_status',null,null,{detail:u.name+' '+u.status})}toast(S.selUsers.size+(ds.v==='suspend'?' suspended':' reactivated'),{icon:ds.v==='suspend'?'ban':'check'});S.selUsers.clear()}render();return}
+ case 'open-team':S.view='team';S.teamId=ds.id;S.teamTab='members';S.addQ='';render();return;
+ case 'team-tab':S.teamTab=ds.v;render();return;
+ case 'add-member':{const t=T(S.teamId);t.members.push({u:ds.id,r:'member'});log('add_team_member',null);S.addQ='';S.focusNext='#add-member-q';toast(U(ds.id).name+' added',{icon:'user-plus'});render();return}
+ case 'rm-member':{const t=T(S.teamId);const i=t.members.findIndex(m=>m.u===ds.id);const m=t.members[i];t.members.splice(i,1);log('remove_team_member',null);toast(U(ds.id).name+' removed',{icon:'user-minus',undo:()=>t.members.splice(i,0,m)});render();return}
+ case 'save-team':{const t=T(S.teamId);t.name=$('#team-name').value.trim()||t.name;t.desc=$('#team-desc').value.trim();log('rename_team',null);toast('Saved',{icon:'check'});render();return}
+ case 'delete-team':{const t=T(S.teamId);DB.teams=DB.teams.filter(x=>x!==t);DB.grants=DB.grants.filter(g=>!(g.type==='team'&&g.pid===t.id));log('delete_team',null);S.view='teams';toast('Deleted '+t.name,{icon:'trash'});render();return}
+ case 'new-team':S.newTeam=true;S.newTeamName='';S.focusNext='#newteam';render();return;
+ case 'cancel-team':S.newTeam=false;render();return;
+ case 'create-team':{const nm=(S.newTeamName||'').trim();if(!nm)return;if(DB.teams.some(t=>t.name.toLowerCase()===nm.toLowerCase())){toast('Name taken',{icon:'alert',kind:'bad'});return}const id=nid('t');DB.teams.push({id,name:nm,desc:'',members:[]});log('create_team',null);S.newTeam=false;S.view='team';S.teamId=id;S.teamTab='members';S.focusNext='#add-member-q';render();return}
+ case 'audit-via':S.auditF.via=ds.v;render();return;
+ case 'audit-range':S.auditF.range=ds.v;render();return;
+ case 'csv':{const rows=auditRows();const q=s=>'"'+String(s??'').replace(/"/g,'""')+'"';const csv='ts,actor,via,client,op,node,version,ok\n'+rows.map(a=>[new Date(a.ts).toISOString(),U(a.actor)?.email||'',a.via,a.client||'',a.op,a.node?pathOf(a.node):'',a.v||'',a.ok].map(q).join(',')).join('\n');S.modal={type:'csv',csv,n:rows.length};render();return}
+ }}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');const prevMenu=S.menu;
+ if(S.renaming&&!e.target.closest('#rn')){commitRename();if(!el)return}
+ if(S.menu&&!e.target.closest('.menu')){S.menu=null;if(!el){render();return}}
+ if(S.searchOpen&&!e.target.closest('.search')){S.searchOpen=false;if(!el){render();return}}
+ if(!el)return;if(el.tagName==='A'&&el.dataset.a)e.preventDefault();
+ if(el.hasAttribute('data-confirm')&&!el.classList.contains('armed')){e.stopPropagation();if(prevMenu!==S.menu)render();const sel=`[data-a="${el.dataset.a}"]${el.dataset.id?`[data-id="${el.dataset.id}"]`:''}`;const again=document.querySelector(sel);arm(again||el);return}
+ act(el.dataset.a,el.dataset,e,el,prevMenu)});
+document.addEventListener('contextmenu',e=>{const r=e.target.closest('.row[data-id]');if(!r)return;e.preventDefault();openMenu('ctx',null,r.dataset.id,{x:e.clientX,y:e.clientY});render()});
+document.addEventListener('mousedown',e=>{if(e.target.closest('[data-a="fmt"],[data-a="img"]'))e.preventDefault()});
+document.addEventListener('input',e=>{const t=e.target;const id=t.id;
+ if(id==='q'){S.q=t.value;S.searchOpen=true;S.sIdx=0;render();return}
+ if(id==='pal'){S.modal.q=t.value;S.modal.i=0;render();return}
+ if(id==='ed-name'){S.edit.name=t.value.trim();$('#ed-err').textContent=fmError(S.edit);scheduleSave();return}
+ if(id==='ed-desc'){S.edit.desc=t.value;$('#ed-err').textContent=fmError(S.edit);scheduleSave();return}
+ if(id==='ed-raw'){S.edit.body=t.value;scheduleSave();return}
+ if(t.closest&&t.closest('#ed-body')){S.edit.dirty=true;scheduleSave();return}
+ if(id==='share-q'){S.modal.q=t.value;render();return}
+ if(id==='check-q'){S.modal.cq=t.value;S.modal.check=null;render();return}
+ if(id==='people-q'){S.peopleQ=t.value;render();return}
+ if(id==='teams-q'){S.teamsQ=t.value;render();return}
+ if(id==='audit-q'){S.auditF.q=t.value;render();return}
+ if(id==='add-member-q'){S.addQ=t.value;render();return}
+ if(id==='newteam'){S.newTeamName=t.value;return}
+ if(id==='mint-name'){S.modal.name=t.value.trim();const b=document.querySelector('[data-a="mint"]');if(b)b.disabled=!(S.modal.name&&S.modal.scopes.size);return}
+ if(id==='commit-msg'){S.modal.msg=t.value}});
+document.addEventListener('change',e=>{const t=e.target,c=t.dataset.ch;if(!c)return;const M=S.modal;
+ switch(c){
+ case 'diff-a':M.a=t.value==='draft'?'draft':+t.value;break;case 'diff-b':M.b=t.value==='draft'?'draft':+t.value;break;
+ case 'share-role':M.role=+t.value;return;
+ case 'grant-role':{const g=DB.grants.find(x=>x.id===t.dataset.gid);if(t.value==='remove'){const i=DB.grants.indexOf(g);DB.grants.splice(i,1);log('revoke_access',g.node);toast('Removed '+pname(g.type,g.pid),{icon:'user-minus',undo:()=>DB.grants.splice(i,0,g)})}else{g.role=+t.value;log('grant_access',g.node)}break}
+ case 'inherit':{const f=N(M.id);f.inherit=t.checked?1:0;log('set_inherit',f.id);if(!t.checked)toast('Stopped inheriting from '+N(f.parent).name,{icon:'link-off',undo:()=>{f.inherit=1}});break}
+ case 'commit-pub':M.pub=t.checked;return;
+ case 'user-role':{const u=U(t.dataset.id);u.role=t.value;log('set_user_role',null,null,{detail:u.name+' '+u.role});toast(u.name+' is now '+(u.role==='owner'?'an owner':'a member'),{icon:'crown'});break}
+ case 'sel-user':t.checked?S.selUsers.add(t.dataset.id):S.selUsers.delete(t.dataset.id);break;
+ case 'sel-all':{const q=S.peopleQ.toLowerCase();const list=DB.users.filter(u=>u.id!==S.me&&(!q||(u.name+' '+u.email).toLowerCase().includes(q)));if(t.checked)list.forEach(u=>S.selUsers.add(u.id));else S.selUsers.clear();break}
+ case 'member-role':{const m=T(S.teamId).members.find(x=>x.u===t.dataset.id);m.r=t.value;toast(U(m.u).name.split(' ')[0]+' is '+m.r,{icon:'check'});break}
+ case 'audit-actor':S.auditF.actor=t.value;break;case 'audit-op':S.auditF.op=t.value;break;
+ case 'mint-scope':t.checked?M.scopes.add(t.dataset.v):M.scopes.delete(t.dataset.v);break;
+ case 'mint-exp':M.exp=t.value;return;
+ case 'consent-scope':t.checked?S.consentScopes.add(t.dataset.v):S.consentScopes.delete(t.dataset.v);break;
+ }render()});
+document.addEventListener('focusin',e=>{if(e.target.id==='q'&&S.q.trim()&&!S.searchOpen){S.searchOpen=true;render()}});
+document.addEventListener('keydown',e=>{const k=e.key,mod=e.metaKey||e.ctrlKey;const ae=document.activeElement;const typing=ae&&(/INPUT|TEXTAREA|SELECT/.test(ae.tagName)||ae.isContentEditable);
+ if(S.screen!=='app')return;
+ if(mod&&k.toLowerCase()==='k'){e.preventDefault();openPalette();return}
+ if(mod&&k.toLowerCase()==='s'){e.preventDefault();if(S.editing)openCommit();else if(N(S.sel)?.draft&&role(S.sel)>=2){S.modal=null;openCommit()}return}
+ if(mod&&k==='Enter'&&S.modal?.type==='commit'){e.preventDefault();doCommit();return}
+ if(k==='Escape'){if(S.renaming){S.renaming=null;render();return}if(S.modal){S.modal=null;render();return}if(S.menu){S.menu=null;render();return}if(S.searchOpen){S.searchOpen=false;ae.blur();render();return}if(S.editing){leaveEdit();render();return}if(S.mTree){S.mTree=false;render();return}return}
+ if(ae&&ae.id==='rn'&&k==='Enter'){e.preventDefault();commitRename();return}
+ if(S.modal?.type==='palette'){const M=S.modal;if(k==='ArrowDown'||k==='ArrowUp'){e.preventDefault();M.i=Math.max(0,Math.min((M.items||[]).length-1,M.i+(k==='ArrowDown'?1:-1)));render();return}if(k==='Enter'&&M.items&&M.items[M.i]){e.preventDefault();const it=M.items[M.i];S.modal=null;it.go();render();return}}
+ if(ae&&ae.id==='q'){const n=(S._sItems||[]).length;if(k==='ArrowDown'||k==='ArrowUp'){e.preventDefault();S.sIdx=Math.max(0,Math.min(n-1,S.sIdx+(k==='ArrowDown'?1:-1)));render();return}if(k==='Enter'&&n){e.preventDefault();const id=S._sItems[S.sIdx];S.q='';ae.blur();goNode(id);return}}
+ if(ae&&ae.id==='share-q'&&k==='Enter'){const b=document.querySelector('.sugg [data-a="pick"]');if(b){e.preventDefault();b.click()}return}
+ if(ae&&ae.id==='newteam'&&k==='Enter'){act('create-team',{});return}
+ if(typing)return;
+ if(k==='/'){e.preventDefault();$('#q')?.focus();return}
+ if(k==='e'&&!S.editing&&N(S.sel)?.kind==='doc'&&role(S.sel)>=2&&S.view==='files'){e.preventDefault();act('edit',{})}});
+function openPalette(){S.menu=null;S.modal={type:'palette',q:'',i:0};S.focusNext='#pal';render()}
+document.addEventListener('paste',e=>{if(!S.editing)return;const inBody=e.target.closest&&e.target.closest('#ed-body');const inRaw=e.target.id==='ed-raw';if(!inBody&&!inRaw)return;const f=[...(e.clipboardData?.files||[])][0];if(f){e.preventDefault();insertImage(f);return}if(inBody){e.preventDefault();const t=e.clipboardData.getData('text/plain');document.execCommand('insertText',false,t);S.edit.dirty=true;scheduleSave()}});
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f&&S.editing)insertImage(f)});
+/* drag and drop */
+let hoverT=null;
+document.addEventListener('dragstart',e=>{const r=e.target.closest&&e.target.closest('.row[draggable="true"]');if(!r)return;S.drag=r.dataset.id;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',S.drag);r.classList.add('dragging')});
+function canDrop(id,dest){const n=N(id);return dest!==id&&!isDesc(dest,id)&&dest!==n.parent&&role(n.parent)>=4&&role(dest)>=4}
+document.addEventListener('dragover',e=>{if(S.drag){const r=e.target.closest('.row[data-kind="folder"]');document.querySelectorAll('.row.drop').forEach(x=>x!==r&&x.classList.remove('drop'));if(r&&canDrop(S.drag,r.dataset.id)){e.preventDefault();e.dataTransfer.dropEffect='move';if(!r.classList.contains('drop')){r.classList.add('drop');clearTimeout(hoverT);hoverT=setTimeout(()=>{if(!S.open.has(r.dataset.id)){S.open.add(r.dataset.id);const tb=$('#tree-body');tb.innerHTML=treeRows(roots(),0)}},700)}}return}
+ if(e.target.closest&&e.target.closest('#ed-body,#ed-raw')&&e.dataTransfer.types.includes('Files'))e.preventDefault()});
+document.addEventListener('drop',e=>{if(S.drag){const r=e.target.closest('.row[data-kind="folder"]');const id=S.drag;S.drag=null;clearTimeout(hoverT);if(r&&canDrop(id,r.dataset.id)){e.preventDefault();moveNode(id,r.dataset.id)}else render();return}
+ if(e.target.closest&&e.target.closest('#ed-body,#ed-raw')){const f=e.dataTransfer.files[0];if(f){e.preventDefault();insertImage(f)}}});
+document.addEventListener('dragend',()=>{if(S.drag){S.drag=null;clearTimeout(hoverT);document.querySelectorAll('.dragging,.drop').forEach(x=>x.classList.remove('dragging','drop'))}});
+/* tooltip */
+let tipT=null,tipFor=null;const tip=$('#tip');
+function hideTip(){clearTimeout(tipT);tipFor=null;tip.classList.remove('on')}
+document.addEventListener('pointerover',e=>{const t=e.target.closest('[data-tip]');if(t===tipFor)return;hideTip();if(!t||e.pointerType==='touch'||t.classList.contains('armed'))return;tipFor=t;tipT=setTimeout(()=>{if(!document.body.contains(t))return;const[label,key]=t.dataset.tip.split('|');tip.innerHTML=esc(label)+(key?`<kbd>${esc(key)}</kbd>`:'');const r=t.getBoundingClientRect(),tr=tip.getBoundingClientRect();let x,y;if(t.closest('.rail')){x=r.right+8;y=r.top+r.height/2-tr.height/2}else{x=r.left+r.width/2-tr.width/2;y=r.bottom+6;if(y+tr.height>innerHeight-8)y=r.top-tr.height-6}x=Math.max(8,Math.min(innerWidth-tr.width-8,x));tip.style.left=x+'px';tip.style.top=y+'px';tip.classList.add('on')},350)});
+['pointerdown','scroll','keydown'].forEach(ev=>document.addEventListener(ev,hideTip,true));
+/* init */
+(function(){const t=store.get('sh-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;render()})();
+</script>

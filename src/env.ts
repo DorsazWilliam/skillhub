@@ -1,0 +1,34 @@
+import type { OAuthHelpers } from '@cloudflare/workers-oauth-provider';
+
+export interface Env {
+  DB: D1Database;
+  BUCKET: R2Bucket;
+  OAUTH_KV: KVNamespace;
+  ASSETS?: Fetcher;
+  RATE_LIMITER?: RateLimit;
+  OAUTH_PROVIDER: OAuthHelpers;
+
+  BASE_URL: string;
+  ENTRA_TENANT_ID: string;
+  ENTRA_ALLOWED_TENANTS?: string;
+  ENTRA_CLIENT_ID: string;
+  ALLOWED_EMAIL_DOMAINS?: string;
+  ALLOW_GUESTS?: string;
+  OWNER_EMAILS?: string;
+  MCP_MAX_SCOPES?: string;
+  CATALOG_IN_TOOL_DESC?: string;
+
+  ENTRA_CLIENT_SECRET: string;
+  SESSION_SECRET: string;
+}
+
+export function csv(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function flag(value: string | undefined): boolean {
+  return (value ?? '').toLowerCase() === 'true';
+}

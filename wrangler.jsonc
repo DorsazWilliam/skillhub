@@ -1,0 +1,52 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "skillhub",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  // Deployed on a subdomain of a zone that is already on Cloudflare.
+  // Change the pattern to your hostname; BASE_URL below must match it.
+  "workers_dev": false,
+  "routes": [{ "pattern": "skills.example.com", "custom_domain": true }],
+
+  "assets": {
+    "directory": "./web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/auth/*",
+      "/authorize",
+      "/token",
+      "/register",
+      "/mcp",
+      "/mcp/*",
+      "/a/*",
+      "/.well-known/*",
+      "/healthz"
+    ]
+  },
+
+  // No ids: Wrangler provisions these on first deploy. scripts/setup.mjs has an explicit fallback.
+  "d1_databases": [{ "binding": "DB", "database_name": "skillhub", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "skillhub-assets" }],
+  "kv_namespaces": [{ "binding": "OAUTH_KV" }],
+
+  "ratelimits": [{ "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 300, "period": 60 } }],
+
+  "triggers": { "crons": ["17 3 * * *"] },
+  "observability": { "enabled": true },
+
+  "vars": {
+    "BASE_URL": "https://skills.example.com",
+    "ENTRA_TENANT_ID": "00000000-0000-0000-0000-000000000000",
+    "ENTRA_ALLOWED_TENANTS": "",
+    "ENTRA_CLIENT_ID": "00000000-0000-0000-0000-000000000000",
+    "ALLOWED_EMAIL_DOMAINS": "",
+    "ALLOW_GUESTS": "false",
+    "OWNER_EMAILS": "",
+    "MCP_MAX_SCOPES": "read,write,publish,manage",
+    "CATALOG_IN_TOOL_DESC": "true"
+  }
+}

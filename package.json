@@ -1,0 +1,44 @@
+{
+  "name": "skillhub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p web/tsconfig.json",
+    "test": "vitest run",
+    "parity": "node scripts/check-parity.mjs",
+    "gen": "node scripts/gen-client.mjs",
+    "setup": "node scripts/setup.mjs",
+    "migrate:local": "wrangler d1 migrations apply DB --local",
+    "migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "build": "node scripts/build-web.mjs",
+    "pretest": "node scripts/build-web.mjs",
+    "predeploy": "node scripts/build-web.mjs",
+    "predev": "node scripts/build-web.mjs"
+  },
+  "dependencies": {
+    "@cfworker/json-schema": "^4.1.6",
+    "@cloudflare/workers-oauth-provider": "^1.2.4",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "diff": "^9.0.0",
+    "fflate": "^0.8.3",
+    "hono": "^4.13.19",
+    "jose": "^6.2.17",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.8.4",
+    "@cloudflare/workers-types": "^5.20261118.1",
+    "@types/diff": "^7.0.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.164.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
