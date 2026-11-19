@@ -1,23 +1,73 @@
 # SkillHub
 
-A small, forkable hub where a company keeps its AI agent skills: markdown documents in a folder tree, with versions, a publish pointer, per-folder access, and one MCP endpoint that Claude, ChatGPT and Copilot can connect to. Sign-in is Microsoft Entra ID. Runs on one Cloudflare Worker with D1, R2 and KV.
+One shot project to let a small org store, version and share AI configuration files and manage access control.
+
+<p>
+  <img src="docs/screenshots/desktop-skill.png" alt="A skill with its files, links and backlinks" width="100%">
+</p>
+
+## The idea
+
+Agents get better when they share what a team already knows: how we review code, how we run incidents, what never to do in production. Today that lives in scattered `CLAUDE.md` files, pasted prompts and wiki pages nobody versions. SkillHub keeps it in one place, with the same discipline as code (drafts, versions, publish, rollback, audit) and the same access model as a shared drive. Every agent your people use connects to it over MCP and gets exactly what that person may read.
+
+The library has three areas, each with its own nature:
+
+| Area | What it is | How agents get it |
+| --- | --- | --- |
+| `rules/` | Short files, always on | Sent as the MCP instructions on connect, capped at 8 KB |
+| `skills/` | One folder per skill: `SKILL.md`, templates, scripts, sub-skills | Found and loaded when relevant |
+| `documentation/` | Free-form reference pages | Followed through links |
+
+They connect through canonical `[[area/path]]` links: rules point to skills and docs, skills to docs, docs to each other. That makes the whole library a graph.
+
+<table>
+  <tr>
+    <td width="66%"><img src="docs/screenshots/desktop-graph.png" alt="Graph of rules, skills and documentation"></td>
+    <td width="34%"><img src="docs/screenshots/mobile-graph.png" alt="Graph on a phone"></td>
+  </tr>
+</table>
+
+## Features
+
+- **Versions and publishing.** One shared draft per document, immutable versions, a publish pointer. Viewers and most agents only ever see what was published. Rollback is publishing an older version. A whole skill folder publishes in one step.
+- **History and diffs.** Every version is kept and diffable before you publish it.
+- **Access control.** Viewer, Editor, Publisher and Manager on folders, inherited down the tree, with boundaries that stop inheritance. Teams. Sign-in with Microsoft Entra ID.
+- **One MCP endpoint.** Claude, ChatGPT and Copilot connect with OAuth, a consent page and scope checkboxes. Tools are filtered by scope and role.
+- **Links, backlinks and a graph.** A link to something you cannot read shows as locked and is never named.
+- **Authoring warnings.** Small, dismissable hints when a skill or rule breaks the usual guidelines (vague names, descriptions that do not say when to use them, long rules, broken links). They come back from the MCP write tools too, so agents fix their own drafts.
+- **Audit.** Every call, including which agent read which skill version. Seven days in the database, then archived to R2.
+- **REST, MCP and a typed client from one registry.** Every operation is defined once.
+- **Desktop and phone.** The phone layout follows iOS conventions: tab bar, push navigation, sheets, swipe actions.
+- **Cheap to run.** One Cloudflare Worker with D1, R2 and KV, on the $5 Workers plan.
+
+<table>
+  <tr>
+    <td width="66%"><img src="docs/screenshots/desktop-history-diff.png" alt="Version history and diff"></td>
+    <td width="34%"><img src="docs/screenshots/mobile-skill.png" alt="A skill on a phone"></td>
+  </tr>
+  <tr>
+    <td width="66%"><img src="docs/screenshots/desktop-share.png" alt="Sharing a folder"></td>
+    <td width="34%"><img src="docs/screenshots/mobile-home.png" alt="Library on a phone"></td>
+  </tr>
+</table>
+
+## Ideas
+
+Not built, and not planned. Things that would fit on top:
+
+- **Marketplace.** Let a company sell access to its skills to other organizations.
+- **MCP gateway.** Put the org's other MCP servers behind the same sign-in, scopes and audit.
+- **Ingestion.** Turn email, Slack and Teams threads into documentation pages that link back to their raw sources.
+- **Semantic search.** A distillation and embeddings layer for search and for picking the right skill.
+- **Sleep-style jobs.** Background passes that flag inconsistencies and contradictions, surface connections, and propose updates to stale pages.
+
+## Deploy
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/DorsazWilliam/skillhub)
 
-The Deploy button works when the repository is public. For a private repository use `npm run setup`.
+The button forks the repository and creates the database, bucket and cache for you. You still need the Entra app registration and secrets; `npm run setup` below does all of it from your machine.
 
-## What you get
-
-- **Three areas.** `rules/` holds short rules every agent receives when it connects (sent as the MCP instructions, capped at 8 KB, with a meter in the app). `skills/` holds one folder per skill: a `SKILL.md` plus templates and scripts (text files, versioned, served as text, never executed), with nested sub-skills. `documentation/` holds free-form reference pages.
-- **Folders, documents, versions.** One shared draft per document with optimistic concurrency, immutable versions, and a publish pointer. Rollback is publishing an older version. `publish_skill` publishes a whole skill folder in one step.
-- **Canonical links.** `[[documentation/engineering/feature-flags]]` style links between areas, checked for direction (rules to skills and documentation, skills to documentation and their own files, documentation to documentation), with backlinks and a graph of everything you can read. A link to something you cannot read shows as locked and is never named.
-- **Authoring warnings.** Saves, commits and publishes return guideline warnings (vague names, descriptions that do not say when, long rules, nested references, broken links and more). They never block, and a dismissal sticks until the flagged text changes.
-- **Access like Google Drive.** Viewer, Editor, Publisher, Manager on folders, inherited down the tree, with "don't inherit" boundaries. Teams like GitHub orgs. Viewers only ever see published content.
-- **One registry, three surfaces.** Every operation is a REST endpoint, an MCP tool and a typed client call, generated from `src/registry`. `node scripts/check-parity.mjs` enforces it.
-- **MCP for chat clients.** OAuth 2.1 with our own consent page and scope checkboxes. Tool lists are filtered by scope. `find_skills` carries a live catalog of the caller's skills.
-- **Audit.** Every call, including skill reads, is logged without document bodies. The last 7 days stay queryable in the app; older rows are archived to R2 as gzipped NDJSON twice a day.
-
-## Quick start
+### From your machine
 
 Prerequisites: Node 22+, a Cloudflare account on the Workers Paid plan, a zone on that account for the hostname, and an Entra app registration ([docs/ENTRA.md](docs/ENTRA.md)).
 
@@ -125,3 +175,7 @@ docs           ENTRA, DEPLOY, CLIENTS, SECURITY, WHITELABEL, DECISIONS
 ## Status
 
 Backend complete for SPEC milestones M0 to M6. The React SPA reproduces the approved prototype (`prototype/index.html`) on desktop and phone. 129 unit and integration tests (`npx vitest run`) and a 13-test Playwright smoke suite (`npm run e2e`).
+
+## License
+
+Public domain ([Unlicense](LICENSE)). Copy it, change it, sell it, call it yours; no credit needed. The project does not take outside contributions ([CONTRIBUTING](CONTRIBUTING.md)).
