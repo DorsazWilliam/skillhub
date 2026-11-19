@@ -39,6 +39,9 @@ and use the returned `client_id` and `client_secret` with authorization URL `htt
 
 ## What agents see
 
-- `tools/list` only contains tools for the scopes the connection holds (about 10 for read-only).
+- The `instructions` returned at `initialize` hold a short usage note followed by the published rules the user can read, ordered by name, up to 8 KB. When more exist, the last line says so and points to `list_children` on `rules` and `get_skill`.
+- `tools/list` only contains tools for the scopes the connection holds (about 18 for read-only).
+- `find_skills` returns skill folders. `get_skill` on a skill (its id, or a canonical path like `skills/code-review`) returns `SKILL.md`, the list of the skill's files, and its outgoing `[[links]]` with their status; `get_skill` on a file path such as `skills/deploy-service/scripts/smoke-test.sh` returns the file as plain text. Locked links never name their target.
+- Write tools (`update_draft`, `commit_version`, `publish_version`, `publish_skill`) return `warnings`. Read tools never do.
 - `find_skills` carries a live catalog of up to 25 skills the user can read in its description, so the model knows what exists without a call.
 - Errors are structured: `forbidden`, `not_found`, `conflict` (with the current etag), `scope_required` (names the scope), `invalid`.

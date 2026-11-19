@@ -8,7 +8,10 @@ The Deploy button works when the repository is public. For a private repository 
 
 ## What you get
 
-- **Folders, documents, versions.** One shared draft per document with optimistic concurrency, immutable versions, and a publish pointer. Rollback is publishing an older version.
+- **Three areas.** `rules/` holds short rules every agent receives when it connects (sent as the MCP instructions, capped at 8 KB, with a meter in the app). `skills/` holds one folder per skill: a `SKILL.md` plus templates and scripts (text files, versioned, served as text, never executed), with nested sub-skills. `documentation/` holds free-form reference pages.
+- **Folders, documents, versions.** One shared draft per document with optimistic concurrency, immutable versions, and a publish pointer. Rollback is publishing an older version. `publish_skill` publishes a whole skill folder in one step.
+- **Canonical links.** `[[documentation/engineering/feature-flags]]` style links between areas, checked for direction (rules to skills and documentation, skills to documentation and their own files, documentation to documentation), with backlinks and a graph of everything you can read. A link to something you cannot read shows as locked and is never named.
+- **Authoring warnings.** Saves, commits and publishes return guideline warnings (vague names, descriptions that do not say when, long rules, nested references, broken links and more). They never block, and a dismissal sticks until the flagged text changes.
 - **Access like Google Drive.** Viewer, Editor, Publisher, Manager on folders, inherited down the tree, with "don't inherit" boundaries. Teams like GitHub orgs. Viewers only ever see published content.
 - **One registry, three surfaces.** Every operation is a REST endpoint, an MCP tool and a typed client call, generated from `src/registry`. `node scripts/check-parity.mjs` enforces it.
 - **MCP for chat clients.** OAuth 2.1 with our own consent page and scope checkboxes. Tool lists are filtered by scope. `find_skills` carries a live catalog of the caller's skills.
@@ -72,7 +75,7 @@ node scripts/check-parity.mjs
 npm run dev
 ```
 
-After changing an operation, run `npm run gen` to regenerate `web/src/api/client.ts`. After editing a built-in skill in `src/seed`, run `node scripts/gen-seed.mjs` (new instances only; existing instances edit `_hub` in the app).
+After changing an operation, run `npm run gen` to regenerate `web/src/api/client.ts`. After editing a built-in skill in `src/seed`, run `node scripts/gen-seed.mjs`; it writes a migration that adds the new text as a version and publishes it wherever the published version is still the built-in one (see the script header before changing the seed again).
 
 ## Layout
 
