@@ -1,10 +1,13 @@
 import type { AnyOp } from './types';
 import { whoami, listApiTokens, listMcpConnections } from './account';
-import { listChildren, getNode, createFolder, createDoc, renameNode, moveNode, deleteNode, restoreNode, listTrash } from './nodes';
+import { listChildren, getNode, createFolder, createDoc, createSkill, renameNode, moveNode, deleteNode, restoreNode, listTrash } from './nodes';
 import { getSkill, getDraft, updateDraft, discardDraft, commitVersion, listVersions, getVersionOp, diffVersions, publishVersion, unpublish } from './docs';
 import { listGrants, grantAccess, revokeAccess, setInherit, effectiveAccess } from './access';
 import { uploadAsset, getAsset } from './assets';
 import { findSkillsOp, search } from './search';
+import { getLinks, getGraph } from './links';
+import { publishSkill, getRulesSize } from './skills';
+import { getWarnings, dismissWarning, restoreWarnings } from './warnings';
 import {
   listUsers,
   setUserRole,
@@ -37,9 +40,13 @@ export const OPS: AnyOp[] = [
   effectiveAccess,
   listApiTokens,
   listMcpConnections,
+  getLinks,
+  getGraph,
+  getRulesSize,
   // WRITE
   createFolder,
   createDoc,
+  createSkill,
   renameNode,
   getDraft,
   updateDraft,
@@ -49,8 +56,12 @@ export const OPS: AnyOp[] = [
   getVersionOp,
   diffVersions,
   uploadAsset,
+  getWarnings,
+  dismissWarning,
+  restoreWarnings,
   // PUBLISH
   publishVersion,
+  publishSkill,
   unpublish,
   // MANAGE
   listGrants,

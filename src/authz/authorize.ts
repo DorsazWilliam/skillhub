@@ -81,27 +81,37 @@ export class Authz {
     const idList = [...ids];
     const inherit = new Map<string, number>();
     const grant = new Map<string, number>();
+    const unpublishedSkills = new Set<string>();
     for (let i = 0; i < idList.length; i += CHUNK) {
       const part = idList.slice(i, i + CHUNK);
-      const [flags, grants] = await this.db.batch([
+      const [flags, grants, skills] = await this.db.batch([
         this.db.prepare(`SELECT id, inherit FROM nodes WHERE id IN (${qs(part.length)})`).bind(...part),
         this.db
           .prepare(
             `SELECT g.node_id AS node_id, MAX(g.role) AS role FROM grants g WHERE g.node_id IN (${qs(part.length)}) AND ${PRINCIPALS_SQL} GROUP BY g.node_id`,
           )
           .bind(...part, this.actor.user.id, this.actor.user.id),
+        this.db
+          .prepare(
+            `SELECT parent_id FROM nodes WHERE parent_id IN (${qs(part.length)}) AND name = 'SKILL.md' AND kind = 'doc' AND deleted_at IS NULL AND published_version IS NULL`,
+          )
+          .bind(...part),
       ]);
       for (const r of (flags?.results ?? []) as { id: string; inherit: number }[]) inherit.set(r.id, r.inherit);
       for (const r of (grants?.results ?? []) as { node_id: string; role: number }[]) grant.set(r.node_id, r.role);
+      for (const r of (skills?.results ?? []) as { parent_id: string }[]) unpublishedSkills.add(r.parent_id);
     }
     for (const n of todo) {
       let role = 0;
-      for (const f of chains.get(n.id) ?? []) {
+      const chain = chains.get(n.id) ?? [];
+      for (const f of chain) {
         role = Math.max(role, grant.get(f) ?? 0);
         if ((inherit.get(f) ?? 1) === 0) break;
       }
       // Viewers only ever see published documents: an unpublished doc does not exist for them.
       if (n.kind === 'doc' && role < 2 && n.published_version === null) role = 0;
+      // Likewise a skill whose SKILL.md is unpublished, and everything inside it.
+      if (role < 2 && chain.some((f) => unpublishedSkills.has(f))) role = 0;
       this.memo.set(n.id, role);
       out.set(n.id, role);
     }
@@ -150,8 +160,8 @@ export class Authz {
       case 'node': {
         const node = target?.node;
         if (node === null || node === undefined) {
-          if (this.isOwner) return 4;
-          throw new AppError('forbidden', 'Only owners can change the top level');
+          // The top level holds only the three fixed areas; nobody changes it.
+          throw new AppError('forbidden', 'The top level holds only the rules, skills and documentation areas');
         }
         const role = nodeRole ?? (await this.role(node));
         if (role < req.minRole) {

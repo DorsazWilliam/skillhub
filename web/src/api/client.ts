@@ -73,8 +73,12 @@ export type ListChildrenOutput = {
     path: string;
     parent_id: string | null;
     access: "none" | "viewer" | "editor" | "publisher" | "manager";
+    area: "rules" | "skills" | "documentation" | null;
+    is_area: boolean;
+    canonical_path: string | null;
     inherit?: boolean;
     is_skill?: boolean;
+    format?: string;
     published_version?: number | null;
     head_version?: number | null;
     has_draft?: boolean | null;
@@ -94,30 +98,50 @@ export type GetNodeOutput = {
   path: string;
   parent_id: string | null;
   access: "none" | "viewer" | "editor" | "publisher" | "manager";
+  area: "rules" | "skills" | "documentation" | null;
+  is_area: boolean;
+  canonical_path: string | null;
   inherit?: boolean;
   is_skill?: boolean;
+  format?: string;
   published_version?: number | null;
   head_version?: number | null;
   has_draft?: boolean | null;
   updated_at: number;
 };
 
-/** Read a document or skill. Viewers get the published version. Editors may ask for any version or the draft. (scope: read) */
+/** Read a skill (by its folder, SKILL.md or canonical path like skills/code-review), a document, or a file inside a skill. A skill returns SKILL.md plus the list of its files. Viewers get the published version; editors may ask for any version or the draft. (scope: read) */
 export type GetSkillInput = {
   doc: string;
   version?: number | "draft";
 };
 export type GetSkillOutput = {
   id: string;
+  skill_id: string | null;
+  kind: "skill" | "markdown" | "file";
+  format: string;
   path: string;
+  canonical_path: string | null;
   version: number | null;
   published_version: number | null;
   frontmatter: Record<string, unknown> | null;
   markdown: string;
+  files: Array<{
+    id: string;
+    path: string;
+    kind: "markdown" | "file" | "skill";
+    format: string | null;
+    published_version: number | null;
+    head_version: number | null;
+  }> | null;
   links: Array<{
-    href: string;
+    index: number;
+    href: string | null;
+    label: string | null;
+    status: "ok" | "wrong_direction" | "broken" | "locked";
     id: string | null;
-    path: string | null;
+    canonical_path: string | null;
+    kind: "folder" | "skill" | "doc" | "file" | null;
   }>;
   assets: Array<{
     id: string;
@@ -125,7 +149,7 @@ export type GetSkillOutput = {
   }>;
 };
 
-/** Find published skills relevant to a task. Returns ranked skills you can read; then call get_skill. (scope: read) */
+/** Find published skills relevant to a task. Returns ranked skill folders you can read; then call get_skill with the id. (scope: read) */
 export type FindSkillsInput = {
   task: string;
   limit?: number;
@@ -134,13 +158,14 @@ export type FindSkillsOutput = {
   skills: Array<{
     id: string;
     path: string;
+    canonical_path: string | null;
     name: string;
     description: string;
     version: number;
   }>;
 };
 
-/** Search folder and document names, and published skill content. (scope: read) */
+/** Search folder and document names, published skills, and the content of published documents and files. (scope: read) */
 export type SearchInput = {
   q: string;
   limit?: number;
@@ -154,8 +179,12 @@ export type SearchOutput = {
       path: string;
       parent_id: string | null;
       access: "none" | "viewer" | "editor" | "publisher" | "manager";
+      area: "rules" | "skills" | "documentation" | null;
+      is_area: boolean;
+      canonical_path: string | null;
       inherit?: boolean;
       is_skill?: boolean;
+      format?: string;
       published_version?: number | null;
       head_version?: number | null;
       has_draft?: boolean | null;
@@ -231,9 +260,71 @@ export type ListMcpConnectionsOutput = {
   }>;
 };
 
-/** Create a folder. Without a parent, creates a top-level folder (owners only). (scope: write) */
+/** Outgoing [[links]] of a document or skill with their status (ok, wrong_direction, broken, locked), and the readable documents that link to it. Locked targets are never named. (scope: read) */
+export type GetLinksInput = {
+  node: string;
+  version?: "published" | "draft";
+};
+export type GetLinksOutput = {
+  node: string;
+  outgoing: Array<{
+    index: number;
+    href: string | null;
+    label: string | null;
+    status: "ok" | "wrong_direction" | "broken" | "locked";
+    id: string | null;
+    canonical_path: string | null;
+    kind: "folder" | "skill" | "doc" | "file" | null;
+  }>;
+  backlinks: Array<{
+    id: string;
+    skill_id: string | null;
+    canonical_path: string | null;
+    area: "rules" | "skills" | "documentation" | null;
+    status: "ok" | "wrong_direction";
+  }>;
+};
+
+/** The link graph of everything you can read: skills and documents as nodes, [[links]] as edges. Optionally one area. (scope: read) */
+export type GetGraphInput = {
+  area?: "rules" | "skills" | "documentation";
+};
+export type GetGraphOutput = {
+  nodes: Array<{
+    id: string;
+    open_id: string;
+    kind: "skill" | "doc";
+    label: string;
+    area: "rules" | "skills" | "documentation";
+    canonical_path: string | null;
+    published: boolean;
+  }>;
+  edges: Array<{
+    from: string;
+    to: string;
+    status: "ok" | "wrong_direction";
+    contains: boolean;
+  }>;
+};
+
+/** Size of the published rules you can read, against the 8 KB that agents receive as instructions when they connect. (scope: read) */
+export type GetRulesSizeInput = Record<string, unknown>;
+export type GetRulesSizeOutput = {
+  total_bytes: number;
+  cap_bytes: number;
+  sent_bytes: number;
+  truncated: boolean;
+  rules: Array<{
+    id: string;
+    name: string;
+    bytes: number;
+    included: boolean;
+  }>;
+};
+
+/** Create a folder inside skills/ or documentation/ (rules/ has no folders; the top level holds only the three areas). For a skill, use create_skill. (scope: write) */
 export type CreateFolderInput = {
-  parent?: string;
+  parent: string;
   name: string;
 };
 export type CreateFolderOutput = {
@@ -243,15 +334,19 @@ export type CreateFolderOutput = {
   path: string;
   parent_id: string | null;
   access: "none" | "viewer" | "editor" | "publisher" | "manager";
+  area: "rules" | "skills" | "documentation" | null;
+  is_area: boolean;
+  canonical_path: string | null;
   inherit?: boolean;
   is_skill?: boolean;
+  format?: string;
   published_version?: number | null;
   head_version?: number | null;
   has_draft?: boolean | null;
   updated_at: number;
 };
 
-/** Create a document in a folder, optionally with initial draft content. (scope: write) */
+/** Create a document in a folder, optionally with initial draft content. Names ending in .sh .py .sql .js .ts .json .yaml .yml .toml .txt .csv .ps1 are text files, allowed only inside a skill folder. (scope: write) */
 export type CreateDocInput = {
   parent: string;
   name: string;
@@ -265,14 +360,64 @@ export type CreateDocOutput = {
     path: string;
     parent_id: string | null;
     access: "none" | "viewer" | "editor" | "publisher" | "manager";
+    area: "rules" | "skills" | "documentation" | null;
+    is_area: boolean;
+    canonical_path: string | null;
     inherit?: boolean;
     is_skill?: boolean;
+    format?: string;
     published_version?: number | null;
     head_version?: number | null;
     has_draft?: boolean | null;
     updated_at: number;
   };
   etag: string | null;
+};
+
+/** Create a skill: a folder under skills/ holding a SKILL.md draft with the name and description. Inside another skill it becomes a sub-skill. Then edit the draft, commit, and publish with publish_skill. (scope: write) */
+export type CreateSkillInput = {
+  parent: string;
+  name: string;
+  description?: string;
+};
+export type CreateSkillOutput = {
+  folder: {
+    id: string;
+    kind: "folder" | "doc";
+    name: string;
+    path: string;
+    parent_id: string | null;
+    access: "none" | "viewer" | "editor" | "publisher" | "manager";
+    area: "rules" | "skills" | "documentation" | null;
+    is_area: boolean;
+    canonical_path: string | null;
+    inherit?: boolean;
+    is_skill?: boolean;
+    format?: string;
+    published_version?: number | null;
+    head_version?: number | null;
+    has_draft?: boolean | null;
+    updated_at: number;
+  };
+  skill_md: {
+    id: string;
+    kind: "folder" | "doc";
+    name: string;
+    path: string;
+    parent_id: string | null;
+    access: "none" | "viewer" | "editor" | "publisher" | "manager";
+    area: "rules" | "skills" | "documentation" | null;
+    is_area: boolean;
+    canonical_path: string | null;
+    inherit?: boolean;
+    is_skill?: boolean;
+    format?: string;
+    published_version?: number | null;
+    head_version?: number | null;
+    has_draft?: boolean | null;
+    updated_at: number;
+  };
+  etag: string;
 };
 
 /** Rename a folder or document. (scope: write) */
@@ -287,8 +432,12 @@ export type RenameNodeOutput = {
   path: string;
   parent_id: string | null;
   access: "none" | "viewer" | "editor" | "publisher" | "manager";
+  area: "rules" | "skills" | "documentation" | null;
+  is_area: boolean;
+  canonical_path: string | null;
   inherit?: boolean;
   is_skill?: boolean;
+  format?: string;
   published_version?: number | null;
   head_version?: number | null;
   has_draft?: boolean | null;
@@ -310,7 +459,7 @@ export type GetDraftOutput = {
   head_version: number;
 };
 
-/** Create or replace the draft. Pass the etag you last saw; a stale etag returns conflict with the current draft. (scope: write) */
+/** Create or replace the draft. Pass the etag you last saw; a stale etag returns conflict with the current draft. Returns authoring warnings: fix them, or tell the human why not, before committing. (scope: write) */
 export type UpdateDraftInput = {
   doc: string;
   content: string;
@@ -320,6 +469,12 @@ export type UpdateDraftOutput = {
   etag: string;
   base_version: number;
   updated_at: number;
+  warnings: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
 };
 
 /** Throw away the current draft. (scope: write) */
@@ -331,7 +486,7 @@ export type DiscardDraftOutput = {
   discarded: boolean;
 };
 
-/** Turn the draft into the next immutable version. Frontmatter is validated. (scope: write) */
+/** Turn the draft into the next immutable version. Markdown frontmatter is validated. Returns authoring warnings for the new version. (scope: write) */
 export type CommitVersionInput = {
   doc: string;
   message?: string;
@@ -341,6 +496,12 @@ export type CommitVersionOutput = {
   version: number;
   sha256: string;
   is_skill: boolean;
+  warnings: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
 };
 
 /** List versions of a document, newest first. (scope: write) */
@@ -406,7 +567,73 @@ export type UploadAssetOutput = {
   markdown: string;
 };
 
-/** Make version n the published version of a document. Rolling back is publishing an older n. (scope: publish) */
+/** Authoring warnings for a document (or the rules area) against the guidelines, with the ones that were dismissed. Warnings never block a save. (scope: write) */
+export type GetWarningsInput = {
+  node: string;
+  version?: number | "latest" | "draft" | "published";
+};
+export type GetWarningsOutput = {
+  node: string;
+  version: number | "draft" | null;
+  warnings: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
+  dismissed: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
+};
+
+/** Dismiss one warning on a node by its key. It stays dismissed across new versions until the flagged text changes. Creates no version. (scope: write) */
+export type DismissWarningInput = {
+  node: string;
+  key: string;
+};
+export type DismissWarningOutput = {
+  node: string;
+  version: number | "draft" | null;
+  warnings: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
+  dismissed: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
+};
+
+/** Bring back every dismissed warning on a node. (scope: write) */
+export type RestoreWarningsInput = {
+  node: string;
+};
+export type RestoreWarningsOutput = {
+  node: string;
+  version: number | "draft" | null;
+  warnings: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
+  dismissed: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
+  restored: number;
+};
+
+/** Make version n the published version of one document. Rolling back is publishing an older n. To publish a whole skill folder at once, use publish_skill. (scope: publish) */
 export type PublishVersionInput = {
   doc: string;
   version: number;
@@ -416,6 +643,35 @@ export type PublishVersionOutput = {
   published_version: number;
   previous_version: number | null;
   is_skill: boolean;
+  warnings: Array<{
+    code: string;
+    message: string;
+    key: string;
+    level: "warn" | "broken";
+  }>;
+};
+
+/** Publish a whole skill at once: the latest committed version of every changed file in the skill folder (not nested sub-skills), atomically. Commit drafts first. Returns per-file results. (scope: publish) */
+export type PublishSkillInput = {
+  skill: string;
+};
+export type PublishSkillOutput = {
+  skill: string;
+  published: number;
+  files: Array<{
+    id: string;
+    path: string;
+    status: "published" | "unchanged" | "empty" | "forbidden";
+    from: number | null;
+    to: number | null;
+    has_draft: boolean;
+    warnings: Array<{
+      code: string;
+      message: string;
+      key: string;
+      level: "warn" | "broken";
+    }>;
+  }>;
 };
 
 /** Remove the published pointer. Viewers lose access to the content. (scope: publish) */
@@ -489,10 +745,10 @@ export type SetInheritOutput = {
   added_self_grant: boolean;
 };
 
-/** Move a folder or document to another folder. Needs manager on the source and the destination. (scope: manage) */
+/** Move a folder or document to another folder in the same area. Needs manager on the source and the destination. (scope: manage) */
 export type MoveNodeInput = {
   node: string;
-  to?: string;
+  to: string;
 };
 export type MoveNodeOutput = {
   node: {
@@ -502,8 +758,12 @@ export type MoveNodeOutput = {
     path: string;
     parent_id: string | null;
     access: "none" | "viewer" | "editor" | "publisher" | "manager";
+    area: "rules" | "skills" | "documentation" | null;
+    is_area: boolean;
+    canonical_path: string | null;
     inherit?: boolean;
     is_skill?: boolean;
+    format?: string;
     published_version?: number | null;
     head_version?: number | null;
     has_draft?: boolean | null;
@@ -533,8 +793,12 @@ export type RestoreNodeOutput = {
   path: string;
   parent_id: string | null;
   access: "none" | "viewer" | "editor" | "publisher" | "manager";
+  area: "rules" | "skills" | "documentation" | null;
+  is_area: boolean;
+  canonical_path: string | null;
   inherit?: boolean;
   is_skill?: boolean;
+  format?: string;
   published_version?: number | null;
   head_version?: number | null;
   has_draft?: boolean | null;
@@ -723,8 +987,12 @@ export type ListTeamAccessOutput = {
       path: string;
       parent_id: string | null;
       access: "none" | "viewer" | "editor" | "publisher" | "manager";
+      area: "rules" | "skills" | "documentation" | null;
+      is_area: boolean;
+      canonical_path: string | null;
       inherit?: boolean;
       is_skill?: boolean;
+      format?: string;
       published_version?: number | null;
       head_version?: number | null;
       has_draft?: boolean | null;
@@ -796,8 +1064,12 @@ export const api = {
   effective_access: (input: EffectiveAccessInput): Promise<EffectiveAccessOutput> => call<EffectiveAccessOutput>("GET", "/nodes/{node}/access", input as Record<string, unknown>, ["node"]),
   list_api_tokens: (input: ListApiTokensInput = {}): Promise<ListApiTokensOutput> => call<ListApiTokensOutput>("GET", "/tokens", input as Record<string, unknown>, []),
   list_mcp_connections: (input: ListMcpConnectionsInput = {}): Promise<ListMcpConnectionsOutput> => call<ListMcpConnectionsOutput>("GET", "/connections", input as Record<string, unknown>, []),
+  get_links: (input: GetLinksInput): Promise<GetLinksOutput> => call<GetLinksOutput>("GET", "/nodes/{node}/links", input as Record<string, unknown>, ["node"]),
+  get_graph: (input: GetGraphInput): Promise<GetGraphOutput> => call<GetGraphOutput>("GET", "/graph", input as Record<string, unknown>, []),
+  get_rules_size: (input: GetRulesSizeInput = {}): Promise<GetRulesSizeOutput> => call<GetRulesSizeOutput>("GET", "/rules/size", input as Record<string, unknown>, []),
   create_folder: (input: CreateFolderInput): Promise<CreateFolderOutput> => call<CreateFolderOutput>("POST", "/folders", input as Record<string, unknown>, []),
   create_doc: (input: CreateDocInput): Promise<CreateDocOutput> => call<CreateDocOutput>("POST", "/docs", input as Record<string, unknown>, []),
+  create_skill: (input: CreateSkillInput): Promise<CreateSkillOutput> => call<CreateSkillOutput>("POST", "/skills", input as Record<string, unknown>, []),
   rename_node: (input: RenameNodeInput): Promise<RenameNodeOutput> => call<RenameNodeOutput>("PATCH", "/nodes/{node}", input as Record<string, unknown>, ["node"]),
   get_draft: (input: GetDraftInput): Promise<GetDraftOutput> => call<GetDraftOutput>("GET", "/docs/{doc}/draft", input as Record<string, unknown>, ["doc"]),
   update_draft: (input: UpdateDraftInput): Promise<UpdateDraftOutput> => call<UpdateDraftOutput>("PUT", "/docs/{doc}/draft", input as Record<string, unknown>, ["doc"]),
@@ -807,7 +1079,11 @@ export const api = {
   get_version: (input: GetVersionInput): Promise<GetVersionOutput> => call<GetVersionOutput>("GET", "/docs/{doc}/versions/{version}", input as Record<string, unknown>, ["doc","version"]),
   diff_versions: (input: DiffVersionsInput): Promise<DiffVersionsOutput> => call<DiffVersionsOutput>("GET", "/docs/{doc}/diff", input as Record<string, unknown>, ["doc"]),
   upload_asset: (input: UploadAssetInput): Promise<UploadAssetOutput> => call<UploadAssetOutput>("POST", "/docs/{doc}/assets", input as Record<string, unknown>, ["doc"], true),
+  get_warnings: (input: GetWarningsInput): Promise<GetWarningsOutput> => call<GetWarningsOutput>("GET", "/nodes/{node}/warnings", input as Record<string, unknown>, ["node"]),
+  dismiss_warning: (input: DismissWarningInput): Promise<DismissWarningOutput> => call<DismissWarningOutput>("POST", "/nodes/{node}/warnings/dismiss", input as Record<string, unknown>, ["node"]),
+  restore_warnings: (input: RestoreWarningsInput): Promise<RestoreWarningsOutput> => call<RestoreWarningsOutput>("POST", "/nodes/{node}/warnings/restore", input as Record<string, unknown>, ["node"]),
   publish_version: (input: PublishVersionInput): Promise<PublishVersionOutput> => call<PublishVersionOutput>("POST", "/docs/{doc}/publish", input as Record<string, unknown>, ["doc"]),
+  publish_skill: (input: PublishSkillInput): Promise<PublishSkillOutput> => call<PublishSkillOutput>("POST", "/skills/{skill}/publish", input as Record<string, unknown>, ["skill"]),
   unpublish: (input: UnpublishInput): Promise<UnpublishOutput> => call<UnpublishOutput>("POST", "/docs/{doc}/unpublish", input as Record<string, unknown>, ["doc"]),
   list_grants: (input: ListGrantsInput): Promise<ListGrantsOutput> => call<ListGrantsOutput>("GET", "/folders/{folder}/grants", input as Record<string, unknown>, ["folder"]),
   grant_access: (input: GrantAccessInput): Promise<GrantAccessOutput> => call<GrantAccessOutput>("POST", "/folders/{folder}/grants", input as Record<string, unknown>, ["folder"]),

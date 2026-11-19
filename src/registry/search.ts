@@ -3,9 +3,16 @@ import { all, type NodeRow } from '../db/d1';
 import { ftsQuery } from '../db/fts';
 import type { Authz } from '../authz/authorize';
 import { defineOp } from './types';
-import { NodeOut, displayPaths, getNodesByIds, nodeOuts } from './shared';
+import { NodeOut, canonicalPaths, displayPaths, getNodesByIds, nodeOuts } from './shared';
 
-export const SkillHit = z.object({ id: z.string(), path: z.string(), name: z.string(), description: z.string(), version: z.number() });
+export const SkillHit = z.object({
+  id: z.string().describe('The skill folder. Pass it to get_skill.'),
+  path: z.string(),
+  canonical_path: z.string().nullable().describe('Path to use in [[links]]'),
+  name: z.string(),
+  description: z.string(),
+  version: z.number().describe('Published version of SKILL.md'),
+});
 export type SkillHitT = z.infer<typeof SkillHit>;
 
 interface FtsRow {
@@ -33,22 +40,34 @@ export async function findSkills(az: Authz, task: string, limit: number): Promis
   return filterHits(az, rows, limit);
 }
 
+/** skill_fts rows are SKILL.md documents; hits are their skill folders, filtered by authorization. */
 async function filterHits(az: Authz, rows: FtsRow[], limit: number): Promise<SkillHitT[]> {
-  const nodes = (await getNodesByIds(az.db, rows.map((r) => r.doc_id))).filter((n) => n.deleted_at === null && n.published_version !== null);
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-  const roles = await az.roles(nodes);
-  const keep = rows.filter((r) => (roles.get(r.doc_id) ?? 0) > 0).slice(0, limit);
-  const keptNodes = keep.map((r) => byId.get(r.doc_id)!).filter(Boolean);
-  const paths = await displayPaths(az, keptNodes);
-  return keep
-    .filter((r) => byId.has(r.doc_id))
-    .map((r) => ({
-      id: r.doc_id,
-      path: paths.get(r.doc_id)?.path ?? '',
+  const docs = (await getNodesByIds(az.db, rows.map((r) => r.doc_id))).filter((n) => n.deleted_at === null && n.published_version !== null && n.parent_id);
+  const docById = new Map(docs.map((n) => [n.id, n]));
+  const folders = (await getNodesByIds(az.db, [...new Set(docs.map((d) => d.parent_id!))])).filter((f) => f.deleted_at === null);
+  const folderById = new Map(folders.map((f) => [f.id, f]));
+  const roles = await az.roles([...docs, ...folders]);
+  const keep = rows
+    .filter((r) => {
+      const d = docById.get(r.doc_id);
+      return d && (roles.get(d.id) ?? 0) > 0 && (roles.get(d.parent_id!) ?? 0) > 0 && folderById.has(d.parent_id!);
+    })
+    .slice(0, limit);
+  const keptFolders = keep.map((r) => folderById.get(docById.get(r.doc_id)!.parent_id!)!);
+  const paths = await displayPaths(az, keptFolders);
+  const canon = await canonicalPaths(az, keptFolders);
+  return keep.map((r) => {
+    const d = docById.get(r.doc_id)!;
+    const f = folderById.get(d.parent_id!)!;
+    return {
+      id: f.id,
+      path: paths.get(f.id)?.path ?? '',
+      canonical_path: canon.get(f.id) ?? null,
       name: r.name,
       description: r.description,
-      version: byId.get(r.doc_id)!.published_version!,
-    }));
+      version: d.published_version!,
+    };
+  });
 }
 
 /** Catalog for the dynamic find_skills description: recently updated readable skills. */
@@ -63,7 +82,7 @@ export async function catalog(az: Authz, max: number): Promise<SkillHitT[]> {
 
 export const findSkillsOp = defineOp({
   name: 'find_skills',
-  summary: 'Find published skills relevant to a task. Returns ranked skills you can read; then call get_skill.',
+  summary: 'Find published skills relevant to a task. Returns ranked skill folders you can read; then call get_skill with the id.',
   scope: 'read',
   target: { kind: 'user' },
   input: z.object({ task: z.string().max(500).describe('What you are trying to do, in a few words'), limit: z.number().int().min(1).max(25).default(8) }),
@@ -78,7 +97,7 @@ export const findSkillsOp = defineOp({
 
 export const search = defineOp({
   name: 'search',
-  summary: 'Search folder and document names, and published skill content.',
+  summary: 'Search folder and document names, published skills, and the content of published documents and files.',
   scope: 'read',
   target: { kind: 'user' },
   input: z.object({ q: z.string().min(1).max(200), limit: z.number().int().min(1).max(50).default(20) }),
@@ -94,22 +113,47 @@ export const search = defineOp({
       like,
     );
     const q = ftsQuery(input.q);
-    const fts = q
+    const skillHits = q
       ? await all<FtsRow>(
           ctx.db,
           "SELECT doc_id, name, description, bm25(skill_fts, 0, 10.0, 5.0, 1.0) AS score, snippet(skill_fts, 3, '', '', ' ... ', 16) AS snip FROM skill_fts WHERE skill_fts MATCH ? ORDER BY score LIMIT 100",
           q,
         )
       : [];
-    const ftsNodes = await getNodesByIds(ctx.db, fts.map((f) => f.doc_id).filter((id) => !byName.some((n) => n.id === id)));
-    const candidates = [...byName, ...ftsNodes.filter((n) => n.deleted_at === null && n.published_version !== null)];
+    const docHits = q
+      ? await all<FtsRow>(
+          ctx.db,
+          "SELECT doc_id, name, '' AS description, bm25(doc_fts, 0, 5.0, 1.0) AS score, snippet(doc_fts, 2, '', '', ' ... ', 16) AS snip FROM doc_fts WHERE doc_fts MATCH ? ORDER BY score LIMIT 100",
+          q,
+        )
+      : [];
+    // A skill hit is shown as its skill folder.
+    const skillDocs = await getNodesByIds(ctx.db, skillHits.map((h) => h.doc_id));
+    const skillFolderOf = new Map(skillDocs.filter((d) => d.parent_id && d.deleted_at === null && d.published_version !== null).map((d) => [d.id, d.parent_id!]));
+    const contentIds: string[] = [];
+    const snip = new Map<string, string | null>();
+    for (const h of [...skillHits, ...docHits].sort((a, b) => a.score - b.score)) {
+      const id = skillFolderOf.get(h.doc_id) ?? (skillHits.includes(h) ? null : h.doc_id);
+      if (!id || snip.has(id)) continue;
+      contentIds.push(id);
+      snip.set(id, h.snip ?? null);
+    }
+    const nameIds = new Set(byName.map((n) => n.id));
+    const contentNodes = (await getNodesByIds(ctx.db, contentIds.filter((id) => !nameIds.has(id)))).filter(
+      (n) => n.deleted_at === null && (n.kind === 'folder' || n.published_version !== null),
+    );
+    const order = new Map(contentIds.map((id, i) => [id, i]));
+    contentNodes.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+    const candidates = [...byName, ...contentNodes];
     const roles = await ctx.az.roles(candidates);
     const readable = candidates.filter((n) => (roles.get(n.id) ?? 0) > 0).slice(0, input.limit);
     const outs = await nodeOuts(ctx.az, readable, roles);
-    const snip = new Map(fts.map((f) => [f.doc_id, f.snip ?? null]));
-    const nameIds = new Set(byName.map((n) => n.id));
     return {
-      items: outs.map((o) => ({ node: o, match: nameIds.has(o.id) ? ('name' as const) : ('content' as const), snippet: nameIds.has(o.id) ? null : (snip.get(o.id) ?? null) })),
+      items: outs.map((o) => ({
+        node: o,
+        match: nameIds.has(o.id) ? ('name' as const) : ('content' as const),
+        snippet: nameIds.has(o.id) ? null : (snip.get(o.id) ?? null),
+      })),
     };
   },
 });

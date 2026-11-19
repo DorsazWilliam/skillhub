@@ -30,6 +30,8 @@ export interface NodeRow {
   head_version: number;
   published_version: number | null;
   is_skill: number;
+  /** 'markdown' or a text file extension (docs only). */
+  format: string;
   created_by: string;
   created_at: number;
   updated_at: number;

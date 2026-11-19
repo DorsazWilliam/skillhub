@@ -13,6 +13,7 @@ import { runOp } from '../registry/run';
 import type { AnyOp } from '../registry/types';
 import { opSchemas } from '../http/schema';
 import { findSkillsDescription } from './catalog';
+import { rulesBundle } from '../registry/skills';
 
 export interface McpProps {
   userId: string;
@@ -24,7 +25,24 @@ interface ResourceCtx extends ExecutionContext {
   auth?: { scope: string[]; clientId?: string };
 }
 
-const INSTRUCTIONS = `${brand.name} holds your organization's agent skills. Call find_skills with the task at hand, then get_skill to read the best match before acting. Never publish without showing the diff to the human unless told to.`;
+const INSTRUCTIONS = `${brand.name} holds your organization's rules, skills and documentation. The rules below always apply. Before a task, call find_skills with the task at hand, then get_skill to read the best match (it lists the skill's files; read them with get_skill too) and follow its [[links]] into documentation when needed. Never execute a skill's files unless the skill tells you to and the human agrees. Never publish without showing the diff to the human unless told to.`;
+
+/** Base instructions plus the published rules the user can read, capped at 8 KB (SPEC deviation, see DECISIONS). */
+export async function instructionsFor(az: Authz): Promise<string> {
+  const rules = await rulesBundle(az);
+  return rules.text ? `${INSTRUCTIONS}\n\n# Rules\n\n${rules.text}` : INSTRUCTIONS;
+}
+
+/** True when the JSON-RPC body (one message or a batch) contains an initialize request. */
+async function isInitialize(request: Request): Promise<boolean> {
+  try {
+    const body: unknown = await request.clone().json();
+    const msgs = Array.isArray(body) ? body : [body];
+    return msgs.some((m) => typeof m === 'object' && m !== null && (m as { method?: unknown }).method === 'initialize');
+  } catch {
+    return false;
+  }
+}
 
 /** MCP tools visible to a token: only those whose scope it holds. */
 export function visibleOps(scopes: Set<string>): AnyOp[] {
@@ -40,11 +58,13 @@ function toolError(e: unknown): { content: { type: 'text'; text: string }[]; isE
   return { content: [{ type: 'text', text: JSON.stringify(err.toJSON()) }], isError: true };
 }
 
-export async function buildServer(env: Env, actor: Actor, waitUntil: (p: Promise<unknown>) => void): Promise<Server> {
+export async function buildServer(env: Env, actor: Actor, waitUntil: (p: Promise<unknown>) => void, withRules = true): Promise<Server> {
   const az = new Authz(env.DB, actor);
+  // Rules are only needed for initialize; other requests skip the query.
+  const instructions = withRules ? await instructionsFor(az) : INSTRUCTIONS;
   const server = new Server(
     { name: brand.name, version: '1.0.0' },
-    { capabilities: { tools: { listChanged: false } }, instructions: INSTRUCTIONS, jsonSchemaValidator: new CfWorkerJsonSchemaValidator() },
+    { capabilities: { tools: { listChanged: false } }, instructions, jsonSchemaValidator: new CfWorkerJsonSchemaValidator() },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -96,7 +116,7 @@ export const mcpHandler = {
     if (request.method === 'GET' || request.method === 'DELETE') {
       return new Response(null, { status: 405, headers: { allow: 'POST' } });
     }
-    const server = await buildServer(env, actor, (p) => ctx.waitUntil(p));
+    const server = await buildServer(env, actor, (p) => ctx.waitUntil(p), await isInitialize(request));
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     await server.connect(transport);
     const res = await transport.handleRequest(request);

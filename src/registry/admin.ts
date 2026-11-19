@@ -458,7 +458,9 @@ export const exportTree = defineOp({
       }
       const bytes = strToU8(content);
       total += bytes.length;
-      files[segs.map((s) => s.replace(/[\\:*?"<>|]/g, '_')).join('/') + '.md'] = bytes;
+      const file = segs.map((s) => s.replace(/[\\:*?"<>|]/g, '_')).join('/');
+      // Markdown gets .md (SKILL.md already has it); text files keep their own extension.
+      files[d.format !== 'markdown' || /\.md$/i.test(file) ? file : file + '.md'] = bytes;
     }
     for (const name of usedAssets) {
       const id = name.split('.')[0]!;

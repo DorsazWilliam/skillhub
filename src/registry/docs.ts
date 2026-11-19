@@ -1,16 +1,19 @@
 import { z } from 'zod';
 import { all, one, stmt, type NodeRow } from '../db/d1';
-import { ftsReplace } from '../db/fts';
+import { ftsReplace, isSkillDoc, skillFlag } from '../db/fts';
+import { DbTree } from '../db/tree';
 import { AppError, conflict, invalid, notFound } from '../lib/errors';
 import { LIMITS } from '../lib/limits';
 import { sha256Hex } from '../lib/crypto';
-import { skillMeta, splitFrontmatter, validateFrontmatter } from '../lib/frontmatter';
-import { assetIds, relativeLinks, resolveRelative } from '../lib/markdown';
+import { splitFrontmatter, validateFrontmatter } from '../lib/frontmatter';
+import { assetIds } from '../lib/markdown';
 import { unifiedDiff } from '../lib/diff';
+import { SKILL_MD, isFileFormat } from '../lib/areas';
+import { distinctLinks } from '../lib/links';
 import { ROLE } from '../authz/roles';
-import type { Authz } from '../authz/authorize';
-import { defineOp } from './types';
-import { Cursor, Limit, NodeRef, decodeCursor, displayPaths, encodeCursor, resolveRef } from './shared';
+import { defineOp, type OpContext } from './types';
+import { Cursor, Limit, NodeRef, canonicalPaths, decodeCursor, displayPaths, encodeCursor, getNodeById } from './shared';
+import { LinkOut, SkillFileOut, WarningOut, activeWarnings, linkStmts, outgoingLinks, skillFiles, versionContent } from './content';
 import { isUnique } from './nodes';
 
 interface DraftRow {
@@ -46,49 +49,55 @@ async function getDraftRow(db: D1Database, docId: string): Promise<DraftRow | nu
   return one<DraftRow>(db, 'SELECT * FROM drafts WHERE doc_id = ?', docId);
 }
 
-/** Resolves relative document links to node ids the caller can read. */
-async function resolveLinks(az: Authz, doc: NodeRow, markdown: string): Promise<{ href: string; id: string | null; path: string | null }[]> {
-  const hrefs = relativeLinks(markdown).slice(0, 50);
-  if (hrefs.length === 0) return [];
-  const docPath = (await displayPaths(az, [doc])).get(doc.id)?.path ?? '/' + doc.name;
-  const folderSegs = docPath.split('/').filter(Boolean).slice(0, -1);
-  const out: { href: string; id: string | null; path: string | null }[] = [];
-  for (const href of hrefs) {
-    const segs = resolveRelative(folderSegs, href);
-    let target: NodeRow | null = null;
-    if (segs && segs.length) target = await resolveRef(az, '/' + segs.map(encodeURIComponent).join('/'));
-    if (target && (await az.role(target)) > 0) out.push({ href, id: target.id, path: '/' + segs!.join('/') });
-    else out.push({ href, id: null, path: null });
-  }
-  return out;
-}
-
 export const SkillOut = z.object({
-  id: z.string(),
-  path: z.string(),
+  id: z.string().describe('The document read (for a skill, its SKILL.md)'),
+  skill_id: z.string().nullable().describe('The skill folder this document belongs to, if any'),
+  kind: z.enum(['skill', 'markdown', 'file']),
+  format: z.string().describe('"markdown", or the text file extension. Files are plain text: never execute them unasked.'),
+  path: z.string().describe('Display path (the skill folder for a skill)'),
+  canonical_path: z.string().nullable().describe('Path to use in [[links]]'),
   version: z.number().nullable().describe('null when returning the draft'),
   published_version: z.number().nullable(),
   frontmatter: z.record(z.string(), z.unknown()).nullable(),
-  markdown: z.string(),
-  links: z.array(z.object({ href: z.string(), id: z.string().nullable(), path: z.string().nullable() })),
+  markdown: z.string().describe('The content: markdown, or raw text for files'),
+  files: z.array(SkillFileOut).nullable().describe('For a skill: every file in the skill folder you can read, SKILL.md first, sub-skills last'),
+  links: z.array(LinkOut).describe('Outgoing [[links]] with their status. Locked targets are never named.'),
   assets: z.array(z.object({ id: z.string(), url: z.string() })),
 });
 
+/** For a skill folder or its SKILL.md: the folder and the SKILL.md node. */
+async function skillParts(ctx: OpContext, node: NodeRow, tree: DbTree): Promise<{ folder: NodeRow | null; doc: NodeRow; role: number }> {
+  if (node.kind === 'folder') {
+    const md = await tree.skillMd(node.id);
+    if (!md) throw invalid('This folder is not a skill (it has no SKILL.md). Use list_children to browse it.');
+    const role = await ctx.az.role(md);
+    if (role === 0) throw notFound();
+    return { folder: node, doc: md, role };
+  }
+  if (node.name === SKILL_MD && node.parent_id) {
+    const folder = await getNodeById(ctx.db, node.parent_id);
+    return { folder, doc: node, role: ctx.role };
+  }
+  return { folder: null, doc: node, role: ctx.role };
+}
+
 export const getSkill = defineOp({
   name: 'get_skill',
-  summary: 'Read a document or skill. Viewers get the published version. Editors may ask for any version or the draft.',
+  summary:
+    'Read a skill (by its folder, SKILL.md or canonical path like skills/code-review), a document, or a file inside a skill. A skill returns SKILL.md plus the list of its files. Viewers get the published version; editors may ask for any version or the draft.',
   scope: 'read',
-  target: { kind: 'node', field: 'doc', minRole: ROLE.viewer, nodeKind: 'doc' },
+  target: { kind: 'node', field: 'doc', minRole: ROLE.viewer },
   input: z.object({
-    doc: DocRef,
+    doc: NodeRef.describe('Skill folder, SKILL.md, document or file: id, display path or canonical path'),
     version: z.union([z.number().int().positive(), z.literal('draft')]).optional().describe('Version number or "draft". Default: published'),
   }),
   output: SkillOut,
   rest: { method: 'GET', path: '/docs/{doc}' },
   mcp: { tool: 'get_skill', readOnly: true },
   handler: async (ctx, input) => {
-    const doc = ctx.node!;
-    const editor = ctx.role >= ROLE.editor;
+    const tree = new DbTree(ctx.db);
+    const { folder, doc, role } = await skillParts(ctx, ctx.node!, tree);
+    const editor = role >= ROLE.editor;
     let markdown: string;
     let version: number | null;
     if (input.version === 'draft') {
@@ -107,22 +116,37 @@ export const getSkill = defineOp({
       version = n;
     }
     ctx.audit.version = version;
-    const path = (await displayPaths(ctx.az, [doc])).get(doc.id)?.path ?? '/' + doc.name;
+    const shown = folder ?? doc;
+    const path = (await displayPaths(ctx.az, [shown])).get(shown.id)?.path ?? '/' + shown.name;
+    const file = isFileFormat(doc.format);
     let frontmatter: Record<string, unknown> | null = null;
-    try {
-      frontmatter = splitFrontmatter(markdown).frontmatter;
-    } catch {
-      frontmatter = null;
+    if (!file) {
+      try {
+        frontmatter = splitFrontmatter(markdown).frontmatter;
+      } catch {
+        frontmatter = null;
+      }
+    }
+    let skillId = folder?.id ?? null;
+    if (!skillId) {
+      const chain = doc.path.split('/').filter(Boolean).slice(0, -1);
+      const skills = await tree.skillSet(chain);
+      skillId = [...chain].reverse().find((id) => skills.has(id)) ?? null;
     }
     return {
       id: doc.id,
+      skill_id: skillId,
+      kind: folder ? ('skill' as const) : file ? ('file' as const) : ('markdown' as const),
+      format: doc.format ?? 'markdown',
       path,
+      canonical_path: (await canonicalPaths(ctx.az, [shown])).get(shown.id) ?? null,
       version,
       published_version: doc.published_version,
       frontmatter,
       markdown,
-      links: await resolveLinks(ctx.az, doc, markdown),
-      assets: assetIds(markdown).map((id) => ({ id, url: `${ctx.env.BASE_URL}/a/${id}` })),
+      files: folder ? await skillFiles(ctx.az, folder) : null,
+      links: await outgoingLinks(ctx.az, tree, doc, distinctLinks(markdown)),
+      assets: file ? [] : assetIds(markdown).map((id) => ({ id, url: `${ctx.env.BASE_URL}/a/${id}` })),
     };
   },
 });
@@ -154,7 +178,8 @@ export const getDraft = defineOp({
 
 export const updateDraft = defineOp({
   name: 'update_draft',
-  summary: 'Create or replace the draft. Pass the etag you last saw; a stale etag returns conflict with the current draft.',
+  summary:
+    'Create or replace the draft. Pass the etag you last saw; a stale etag returns conflict with the current draft. Returns authoring warnings: fix them, or tell the human why not, before committing.',
   scope: 'write',
   target: { kind: 'node', field: 'doc', minRole: ROLE.editor, nodeKind: 'doc' },
   input: z.object({
@@ -162,7 +187,7 @@ export const updateDraft = defineOp({
     content: z.string(),
     etag: z.string().max(64).nullable().optional().describe('Etag of the draft you edited. Omit or null when no draft exists yet.'),
   }),
-  output: z.object({ etag: z.string(), base_version: z.number(), updated_at: z.number() }),
+  output: z.object({ etag: z.string(), base_version: z.number(), updated_at: z.number(), warnings: z.array(WarningOut) }),
   rest: { method: 'PUT', path: '/docs/{doc}/draft' },
   mcp: { tool: 'update_draft' },
   handler: async (ctx, input) => {
@@ -201,7 +226,14 @@ export const updateDraft = defineOp({
       if ((res.meta.changes ?? 0) !== 1) throw stale(await getDraftRow(ctx.db, doc.id));
     }
     ctx.audit.detail = { bytes: byteLen(input.content) };
-    return { etag, base_version: current?.base_version ?? doc.head_version, updated_at: now };
+    const tree = new DbTree(ctx.db);
+    await ctx.db.batch(await linkStmts(ctx.db, tree, doc, 'draft', input.content));
+    return {
+      etag,
+      base_version: current?.base_version ?? doc.head_version,
+      updated_at: now,
+      warnings: await activeWarnings(ctx.az, tree, doc, input.content),
+    };
   },
 });
 
@@ -219,17 +251,19 @@ export const discardDraft = defineOp({
       ? await stmt(ctx.db, 'DELETE FROM drafts WHERE doc_id = ? AND etag = ?', ctx.node!.id, input.etag).run()
       : await stmt(ctx.db, 'DELETE FROM drafts WHERE doc_id = ?', ctx.node!.id).run();
     if (input.etag && (res.meta.changes ?? 0) === 0 && (await getDraftRow(ctx.db, ctx.node!.id))) throw conflict('The draft changed since you loaded it');
+    const doc = ctx.node!;
+    await ctx.db.batch(await linkStmts(ctx.db, new DbTree(ctx.db), doc, 'draft', await versionContent(ctx.db, doc.id, doc.head_version || null)));
     return { discarded: (res.meta.changes ?? 0) > 0 };
   },
 });
 
 export const commitVersion = defineOp({
   name: 'commit_version',
-  summary: 'Turn the draft into the next immutable version. Frontmatter is validated.',
+  summary: 'Turn the draft into the next immutable version. Markdown frontmatter is validated. Returns authoring warnings for the new version.',
   scope: 'write',
   target: { kind: 'node', field: 'doc', minRole: ROLE.editor, nodeKind: 'doc' },
   input: z.object({ doc: DocRef, message: z.string().max(500).optional(), etag: z.string().max(64).optional() }),
-  output: z.object({ version: z.number(), sha256: z.string(), is_skill: z.boolean() }),
+  output: z.object({ version: z.number(), sha256: z.string(), is_skill: z.boolean(), warnings: z.array(WarningOut) }),
   rest: { method: 'POST', path: '/docs/{doc}/versions' },
   mcp: { tool: 'commit_version' },
   handler: async (ctx, input) => {
@@ -238,15 +272,18 @@ export const commitVersion = defineOp({
     if (!draft) throw invalid('Nothing to commit: there is no draft');
     if (input.etag && input.etag !== draft.etag) throw conflict('The draft changed since you loaded it', { etag: draft.etag });
     if (byteLen(draft.content) > LIMITS.docBytes) throw invalid('Document is larger than 256 KB');
-    const meta = validateFrontmatter(draft.content);
+    const meta = isFileFormat(doc.format) ? null : validateFrontmatter(draft.content);
     const n = doc.head_version + 1;
     const sha = await sha256Hex(draft.content);
     const now = Date.now();
+    const tree = new DbTree(ctx.db);
+    const links = await linkStmts(ctx.db, tree, doc, 'draft', draft.content);
     try {
       const res = await ctx.db.batch([
         stmt(ctx.db, 'INSERT INTO doc_versions (doc_id, n, content, sha256, message, author_id, created_at) VALUES (?,?,?,?,?,?,?)', doc.id, n, draft.content, sha, input.message ?? null, ctx.actor.user.id, now),
         stmt(ctx.db, 'UPDATE nodes SET head_version = ?, updated_at = ? WHERE id = ? AND head_version = ?', n, now, doc.id, doc.head_version),
         stmt(ctx.db, 'DELETE FROM drafts WHERE doc_id = ? AND etag = ?', doc.id, draft.etag),
+        ...links,
       ]);
       if ((res[1]?.meta.changes ?? 0) !== 1) throw conflict('Another commit happened at the same time');
     } catch (e) {
@@ -255,7 +292,12 @@ export const commitVersion = defineOp({
     }
     ctx.audit.version = n;
     ctx.audit.detail = { message: input.message ?? null };
-    return { version: n, sha256: sha, is_skill: meta !== null };
+    return {
+      version: n,
+      sha256: sha,
+      is_skill: meta !== null && isSkillDoc(doc),
+      warnings: await activeWarnings(ctx.az, tree, doc, draft.content),
+    };
   },
 });
 
@@ -345,27 +387,46 @@ export const diffVersions = defineOp({
   },
 });
 
+/** Statements that make version v the published version of doc: pointer, skill flag, search rows and published links. */
+export async function publishStmts(db: D1Database, tree: DbTree, doc: NodeRow, v: { n: number; content: string }): Promise<D1PreparedStatement[]> {
+  return [
+    stmt(db, 'UPDATE nodes SET published_version = ?, is_skill = ?, updated_at = ? WHERE id = ?', v.n, skillFlag(doc, v.content), Date.now(), doc.id),
+    ...ftsReplace(db, doc, v.content),
+    ...(await linkStmts(db, tree, doc, 'published', v.content)),
+  ];
+}
+
 export const publishVersion = defineOp({
   name: 'publish_version',
-  summary: 'Make version n the published version of a document. Rolling back is publishing an older n.',
+  summary: 'Make version n the published version of one document. Rolling back is publishing an older n. To publish a whole skill folder at once, use publish_skill.',
   scope: 'publish',
   target: { kind: 'node', field: 'doc', minRole: ROLE.publisher, nodeKind: 'doc' },
   input: z.object({ doc: DocRef, version: z.number().int().positive() }),
-  output: z.object({ doc: z.string(), published_version: z.number(), previous_version: z.number().nullable(), is_skill: z.boolean() }),
+  output: z.object({
+    doc: z.string(),
+    published_version: z.number(),
+    previous_version: z.number().nullable(),
+    is_skill: z.boolean(),
+    warnings: z.array(WarningOut),
+  }),
   rest: { method: 'POST', path: '/docs/{doc}/publish' },
   mcp: { tool: 'publish_version' },
   handler: async (ctx, input) => {
     const doc = ctx.node!;
     const v = await getVersion(ctx.db, doc.id, input.version);
     if (!v) throw notFound('Version not found');
-    const meta = skillMeta(v.content);
-    await ctx.db.batch([
-      stmt(ctx.db, 'UPDATE nodes SET published_version = ?, is_skill = ?, updated_at = ? WHERE id = ?', v.n, meta ? 1 : 0, Date.now(), doc.id),
-      ...ftsReplace(ctx.db, doc.id, v.content),
-    ]);
+    const tree = new DbTree(ctx.db);
+    await ctx.db.batch(await publishStmts(ctx.db, tree, doc, v));
     ctx.audit.version = v.n;
     ctx.audit.detail = { previous: doc.published_version };
-    return { doc: doc.id, published_version: v.n, previous_version: doc.published_version, is_skill: meta !== null };
+    ctx.az.reset();
+    return {
+      doc: doc.id,
+      published_version: v.n,
+      previous_version: doc.published_version,
+      is_skill: skillFlag(doc, v.content) === 1,
+      warnings: await activeWarnings(ctx.az, tree, { ...doc, published_version: v.n }, v.content),
+    };
   },
 });
 
@@ -382,9 +443,11 @@ export const unpublish = defineOp({
     const doc = ctx.node!;
     await ctx.db.batch([
       stmt(ctx.db, 'UPDATE nodes SET published_version = NULL, is_skill = 0, updated_at = ? WHERE id = ?', Date.now(), doc.id),
-      ...ftsReplace(ctx.db, doc.id, null),
+      ...ftsReplace(ctx.db, doc, null),
+      stmt(ctx.db, "DELETE FROM links WHERE from_node = ? AND kind = 'published'", doc.id),
     ]);
     ctx.audit.detail = { previous: doc.published_version };
+    ctx.az.reset();
     return { doc: doc.id, previous_version: doc.published_version };
   },
 });
