@@ -59,23 +59,49 @@ Secrets (Wrangler only): `ENTRA_CLIENT_SECRET`, `SESSION_SECRET`.
 
 ## Development
 
+Run the whole stack locally (Worker, local D1, R2 and KV, the React app) with the Acme demo content. Copy the example variables once; `DEV_LOGIN=true` enables a local-only sign-in as owner, publisher or viewer because Entra needs a tenant ([docs/SECURITY.md](docs/SECURITY.md)).
+
 ```powershell
-npm test
+copy .dev.vars.example .dev.vars
 ```
 
 ```powershell
-npm run typecheck
-```
-
-```powershell
-node scripts/check-parity.mjs
+npm run migrate:local
 ```
 
 ```powershell
 npm run dev
 ```
 
-After changing an operation, run `npm run gen` to regenerate `web/src/api/client.ts`. After editing a built-in skill in `src/seed`, run `node scripts/gen-seed.mjs`; it writes a migration that adds the new text as a version and publishes it wherever the published version is still the built-in one (see the script header before changing the seed again).
+In a second terminal, load the demo (local only, once per fresh state):
+
+```powershell
+npm run seed:demo
+```
+
+Open http://localhost:8787 and pick Owner, Publisher or Viewer under "Local development". `npm run dev` rebuilds the SPA first; after changing `web/`, run `npm run build` and restart `npm run dev`.
+
+Checks:
+
+```powershell
+npm run typecheck
+```
+
+```powershell
+npx vitest run
+```
+
+```powershell
+npm run e2e
+```
+
+```powershell
+node scripts/check-parity.mjs
+```
+
+`npm run e2e` starts its own stack on port 8790 with a fresh state, seeds it and runs the Playwright smoke suite. `npm run screenshots` regenerates `docs/screenshots/`. If Playwright cannot download its Chromium, it uses an existing `ms-playwright` Chromium or the installed Chrome (set `PW_EXECUTABLE` to choose).
+
+After changing an operation, run `npm run gen` to regenerate `web/src/api/client.ts`. After editing a built-in skill in `src/seed`, run `node scripts/gen-seed.mjs`; it writes a migration that adds the new text as a version and publishes it wherever the published version is still the built-in one (see the script header before changing the seed again). Licenses of every dependency are in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md).
 
 ## Layout
 
@@ -85,6 +111,8 @@ src/authz      authorize(): the only permission decision
 src/auth       Entra OIDC, sessions, PATs, MCP consent
 src/http       REST routes and OpenAPI generated from the registry, asset proxy, UI-only routes
 src/mcp        stateless MCP server, per-scope tools, catalog
+web            React SPA (Vite); web/src/api/client.ts is generated
+e2e            Playwright smoke suite and screenshots
 migrations     D1 schema and the _hub seed
 prototype      clickable UI prototype
 docs           ENTRA, DEPLOY, CLIENTS, SECURITY, WHITELABEL, DECISIONS
@@ -96,4 +124,4 @@ docs           ENTRA, DEPLOY, CLIENTS, SECURITY, WHITELABEL, DECISIONS
 
 ## Status
 
-Backend complete for SPEC milestones M0 to M6 with 77 tests. The web UI exists as a reviewed-first prototype (`prototype/index.html`); the React SPA is next. Until then the Worker serves a minimal sign-in shell.
+Backend complete for SPEC milestones M0 to M6. The React SPA reproduces the approved prototype (`prototype/index.html`) on desktop and phone. 129 unit and integration tests (`npx vitest run`) and a 13-test Playwright smoke suite (`npm run e2e`).

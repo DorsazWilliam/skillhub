@@ -30,6 +30,11 @@ Migrations must be backward compatible with the version still running: add colum
 copy .dev.vars.example .dev.vars
 npm run migrate:local
 npm run dev
+npm run seed:demo
 ```
 
-Add `http://localhost:8787/auth/callback` as a second redirect URI on a dev app registration.
+`npm run dev` builds the SPA and runs `wrangler dev --infer-origin-from-routes=false` (without the flag Wrangler rewrites the origin to the route's host and every cookie write fails the CSRF check, DECISIONS 32). `seed:demo` loads the Acme demo into the local D1 and R2 only and refuses any non-local URL. With `DEV_LOGIN=true` in `.dev.vars` the sign-in page offers local Owner, Publisher and Viewer accounts; this never works on a deployed instance (DECISIONS 29).
+
+To sign in with Entra locally instead, add `http://localhost:8787/auth/callback` as a second redirect URI on a dev app registration and set the Entra values in `.dev.vars`.
+
+`npm run e2e` runs the Playwright smoke suite against its own seeded stack on port 8790.
