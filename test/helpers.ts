@@ -85,4 +85,21 @@ async function jsonCall(raw: Client['raw'], method: string, path: string, body?:
 
 export { fetchSelf };
 
+/** The three fixed areas (migrations/0003). */
+export const AREA = {
+  rules: '00000000000000000000000AR1',
+  skills: '00000000000000000000000AS1',
+  documentation: '00000000000000000000000AD1',
+} as const;
+
+/**
+ * A fresh folder that stands in for a top-level folder: created under an area (documentation by default) and
+ * cut off from the area's everyone:viewer grant, so tests start from "no access" as before the areas existed.
+ */
+export async function rootFolder(owner: Client, body: { name: string }, area: keyof typeof AREA = 'documentation'): Promise<{ status: number; json: any }> { // eslint-disable-line @typescript-eslint/no-explicit-any -- test JSON
+  const r = await owner.call('POST', '/folders', { parent: AREA[area], name: body.name });
+  if (r.status === 200) await owner.call('PUT', `/folders/${r.json.id}/inherit`, { inherit: false });
+  return r;
+}
+
 export const enc = encodeURIComponent;

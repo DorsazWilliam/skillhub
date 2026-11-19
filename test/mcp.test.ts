@@ -5,7 +5,7 @@ import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { providerOptions } from '../src/worker';
 import { OPS } from '../src/registry';
-import { BASE, fetchSelf, makeUser, sessionClient } from './helpers';
+import { AREA, BASE, fetchSelf, makeUser, makeTeam, sessionClient, rootFolder, type Client } from './helpers';
 import { sha256B64Url } from '../src/lib/crypto';
 import type { UserRow } from '../src/db/d1';
 import type { Env } from '../src/env';
@@ -85,15 +85,16 @@ describe('MCP', () => {
     const client = await connect(token);
     const found = (await client.callTool({ name: 'find_skills', arguments: { task: 'share a folder with a team' } })) as unknown as { structuredContent: { skills: { id: string; name: string }[] } };
     expect(found.structuredContent.skills[0]!.name).toBe('hub-access');
-    const got = (await client.callTool({ name: 'get_skill', arguments: { doc: '/_hub/hub-access' } })) as unknown as { structuredContent: { version: number; markdown: string } };
+    const got = (await client.callTool({ name: 'get_skill', arguments: { doc: '/skills/_hub/hub-access' } })) as unknown as { structuredContent: { version: number; markdown: string } };
     expect(got.structuredContent.version).toBe(1);
+    expect(got.structuredContent).toMatchObject({ kind: 'skill', canonical_path: 'skills/hub-access' });
     expect(got.structuredContent.markdown).toContain('effective_access');
     await client.close();
   });
 
   it('insufficient scope returns scope_required', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
-    const folder = (await owner.call('POST', '/folders', { name: `mcp-${crypto.randomUUID().slice(0, 6)}` })).json.id;
+    const folder = (await rootFolder(owner, { name: `mcp-${crypto.randomUUID().slice(0, 6)}` })).json.id;
     const u = await makeUser();
     await owner.call('POST', `/folders/${folder}/grants`, { principal_type: 'user', principal: u.id, role: 'manager' });
     const doc = (await owner.call('POST', '/docs', { parent: folder, name: 'd', content: 'x' })).json.node.id;
@@ -131,5 +132,69 @@ describe('MCP', () => {
     const t = await tokenClient(u, ['read', 'write', 'publish', 'manage', 'admin']);
     const r = await t.raw('/api/v1/ui/tokens', { method: 'POST', body: JSON.stringify({ name: 'x', scopes: ['read'] }), headers: { 'content-type': 'application/json' } });
     expect(r.status).toBe(403);
+  });
+});
+
+describe('MCP instructions carry the rules', () => {
+  async function publishRule(owner: Client, name: string, content: string, publish = true): Promise<string> {
+    const id = (await owner.call('POST', '/docs', { parent: AREA.rules, name, content })).json.node.id;
+    await owner.call('POST', `/docs/${id}/versions`, {});
+    if (publish) await owner.call('POST', `/docs/${id}/publish`, { version: 1 });
+    return id;
+  }
+
+  it('sends published rules the user can read, ordered by name, and only those', async () => {
+    const owner = await sessionClient(await makeUser({ role: 'owner' }));
+    const tag = crypto.randomUUID().slice(0, 8);
+    await publishRule(owner, `00-b-${tag}`, `---\nlicense: internal\n---\nRULE-B-${tag}: never deploy on Fridays.\n`);
+    await publishRule(owner, `00-a-${tag}`, `RULE-A-${tag}: write tests first.\n`);
+    await publishRule(owner, `00-c-${tag}`, `RULE-C-${tag}: unpublished.\n`, false);
+    const u = await makeUser();
+    const client = await connect((await issueToken(u, ['read'])).token);
+    const text = client.getInstructions() ?? '';
+    expect(text).toContain(`RULE-A-${tag}`);
+    expect(text).toContain(`RULE-B-${tag}`);
+    expect(text.indexOf(`RULE-A-${tag}`)).toBeLessThan(text.indexOf(`RULE-B-${tag}`));
+    expect(text).not.toContain(`RULE-C-${tag}`);
+    expect(text).not.toContain('license: internal');
+    await client.close();
+
+    // Without access to rules/, nothing is sent; a team grant brings them back.
+    await env.DB.prepare("DELETE FROM grants WHERE node_id = ? AND principal_type = 'team' AND principal_id = 'everyone'").bind(AREA.rules).run();
+    try {
+      const outsider = await connect((await issueToken(u, ['read'])).token);
+      expect(outsider.getInstructions() ?? '').not.toContain(`RULE-A-${tag}`);
+      await outsider.close();
+      const team = await makeTeam(`rules-${tag}`, [{ user: u }]);
+      await owner.call('POST', `/folders/${AREA.rules}/grants`, { principal_type: 'team', principal: team, role: 'viewer' });
+      const member = await connect((await issueToken(u, ['read'])).token);
+      expect(member.getInstructions() ?? '').toContain(`RULE-A-${tag}`);
+      await member.close();
+    } finally {
+      await owner.call('POST', `/folders/${AREA.rules}/grants`, { principal_type: 'team', principal: 'everyone', role: 'viewer' });
+    }
+  });
+
+  it('caps the rules at 8 KB with a final line saying more exist, and get_rules_size shows the meter', async () => {
+    const owner = await sessionClient(await makeUser({ role: 'owner' }));
+    const tag = crypto.randomUUID().slice(0, 8);
+    for (let i = 0; i < 5; i++) await publishRule(owner, `zz-big-${tag}-${i}`, `Big rule ${i}. ` + 'word '.repeat(500));
+    const u = await makeUser();
+    const client = await connect((await issueToken(u, ['read'])).token);
+    const text = client.getInstructions() ?? '';
+    const rules = text.slice(text.indexOf('# Rules'));
+    expect(text.trimEnd().endsWith('More rules exist than fit here. List them with list_children on rules and read each one with get_skill.')).toBe(true);
+    expect(new TextEncoder().encode(rules.slice('# Rules\n\n'.length)).length).toBeLessThanOrEqual(8192);
+    await client.close();
+    const size = await (await sessionClient(u)).call('GET', '/rules/size');
+    expect(size.status).toBe(200);
+    expect(size.json.cap_bytes).toBe(8192);
+    expect(size.json.total_bytes).toBeGreaterThan(8192);
+    expect(size.json.truncated).toBe(true);
+    expect(size.json.sent_bytes).toBeLessThanOrEqual(8192);
+    expect(size.json.rules.some((r: { included: boolean }) => !r.included)).toBe(true);
+    // The rules area itself warns when over the cap.
+    const w = await owner.call('GET', `/nodes/${AREA.rules}/warnings`);
+    expect(w.json.warnings.map((x: { code: string }) => x.code)).toEqual(['rules-cap']);
   });
 });

@@ -43,7 +43,9 @@ describe('skeleton', () => {
     const c = await sessionClient(await makeUser());
     const r = await c.call('GET', '/children');
     expect(r.status).toBe(200);
-    expect(r.json.items.map((n: { name: string }) => n.name)).toContain('_hub');
+    expect(r.json.items.map((n: { name: string }) => n.name)).toEqual(['rules', 'skills', 'documentation']);
+    const hub = await c.call('GET', `/nodes/${encodeURIComponent('/skills/_hub')}`);
+    expect(hub.status).toBe(200);
     const s = await c.call('GET', '/skills?task=publish%20a%20version');
     expect(s.json.skills[0].name).toBe('hub-promote');
   });

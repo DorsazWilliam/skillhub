@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { env } from 'cloudflare:workers';
-import { makeUser, sessionClient, tokenClient, type Client } from './helpers';
+import { AREA, makeUser, sessionClient, tokenClient, type Client, rootFolder } from './helpers';
 
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 0x1f, 0x15, 0xc4, 0x89]);
 const b64 = (u: Uint8Array): string => btoa(String.fromCharCode(...u));
@@ -9,7 +9,7 @@ const skill = (body: string, name = 'sql-review'): string => `---\nname: ${name}
 
 async function setup(): Promise<{ owner: Client; editor: Client; viewer: Client; folder: string; doc: string }> {
   const owner = await sessionClient(await makeUser({ role: 'owner' }));
-  const folder = (await owner.call('POST', '/folders', { name: `Eng-${crypto.randomUUID().slice(0, 8)}` })).json.id;
+  const folder = (await rootFolder(owner, { name: `Eng-${crypto.randomUUID().slice(0, 8)}` })).json.id;
   const editorUser = await makeUser();
   const viewerUser = await makeUser();
   await owner.call('POST', `/folders/${folder}/grants`, { principal_type: 'user', principal: editorUser.email, role: 'editor' });
@@ -35,7 +35,8 @@ describe('document lifecycle', () => {
     const d2 = await editor.call('PUT', `/docs/${doc}/draft`, { content: skill('v1 body!'), etag: d1.json.etag });
     expect(d2.status).toBe(200);
     const c1 = await editor.call('POST', `/docs/${doc}/versions`, { message: 'first' });
-    expect(c1.json).toMatchObject({ version: 1, is_skill: true });
+    // A document in documentation/ is never a skill, even with skill frontmatter: skills are folders under skills/.
+    expect(c1.json).toMatchObject({ version: 1, is_skill: false });
     expect((await editor.call('GET', `/docs/${doc}/draft`)).json.draft).toBeNull();
     // Editors cannot publish.
     expect((await editor.call('POST', `/docs/${doc}/publish`, { version: 1 })).status).toBe(403);
@@ -107,9 +108,19 @@ describe('document lifecycle', () => {
   });
 
   it('keeps FTS in step with publish and unpublish', async () => {
-    const { owner, editor, viewer, doc } = await setup();
-    await editor.call('PUT', `/docs/${doc}/draft`, { content: skill('Check indexes and query plans', 'zebra-quokka') });
+    const { owner, editor, viewer, doc: plain } = await setup();
+    // Skills are folders under skills/ now: build one the editor and viewer can reach.
+    const area = (await rootFolder(owner, { name: `Sk-${crypto.randomUUID().slice(0, 8)}` }, 'skills')).json.id;
+    await owner.call('POST', `/folders/${area}/grants`, { principal_type: 'user', principal: editor.user.id, role: 'editor' });
+    await owner.call('POST', `/folders/${area}/grants`, { principal_type: 'user', principal: viewer.user.id, role: 'viewer' });
+    const created = await editor.call('POST', '/skills', { parent: area, name: 'zebra-quokka', description: 'Use when checking indexes.' });
+    const doc = created.json.skill_md.id;
+    await editor.call('PUT', `/docs/${doc}/draft`, { content: skill('Check indexes and query plans', 'zebra-quokka'), etag: created.json.etag });
     await editor.call('POST', `/docs/${doc}/versions`, {});
+    // A plain document is content-searchable but never a skill.
+    await editor.call('PUT', `/docs/${plain}/draft`, { content: '# Zebra quokka notes\n' });
+    await editor.call('POST', `/docs/${plain}/versions`, {});
+    await owner.call('POST', `/docs/${plain}/publish`, { version: 1 });
     expect((await viewer.call('GET', '/skills?task=zebra%20quokka')).json.skills).toHaveLength(0);
     await owner.call('POST', `/docs/${doc}/publish`, { version: 1 });
     expect((await viewer.call('GET', '/skills?task=zebra%20quokka')).json.skills[0].name).toBe('zebra-quokka');

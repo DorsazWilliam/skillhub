@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { env } from 'cloudflare:workers';
-import { enc, makeTeam, makeUser, sessionClient, tokenClient, type Client } from './helpers';
+import { AREA, enc, makeTeam, makeUser, sessionClient, tokenClient, type Client, rootFolder } from './helpers';
 import type { Scope } from '../src/authz/scopes';
 
 /**
@@ -31,7 +31,7 @@ const OPS: OpCase[] = [
 ];
 
 async function buildTree(owner: Client, tag: string, boundary: boolean): Promise<{ root: string; sub: string; doc: string }> {
-  const root = (await owner.call('POST', '/folders', { name: `root-${tag}` })).json.id as string;
+  const root = (await rootFolder(owner, { name: `root-${tag}` })).json.id as string;
   const sub = (await owner.call('POST', '/folders', { parent: root, name: 'sub' })).json.id as string;
   if (boundary) expect((await owner.call('PUT', `/folders/${sub}/inherit`, { inherit: false })).status).toBe(200);
   const doc = (await owner.call('POST', '/docs', { parent: sub, name: 'skill', content: '---\nname: s\ndescription: d\n---\nbody' })).json.node.id as string;
@@ -107,7 +107,7 @@ describe('authorization matrix', () => {
 describe('shared with me', () => {
   it('lists the highest readable folders and never names unreadable ones', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
-    const secretRoot = (await owner.call('POST', '/folders', { name: 'Secret-Root-Name' })).json.id;
+    const secretRoot = (await rootFolder(owner, { name: 'Secret-Root-Name' })).json.id;
     const mid = (await owner.call('POST', '/folders', { parent: secretRoot, name: 'Hidden-Middle' })).json.id;
     const shared = (await owner.call('POST', '/folders', { parent: mid, name: 'Shared-Leaf' })).json.id;
     const u = await makeUser();
@@ -130,7 +130,7 @@ describe('shared with me', () => {
 
   it('hides a boundary child folder the user has no grant on', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
-    const root = (await owner.call('POST', '/folders', { name: 'Open-Root' })).json.id;
+    const root = (await rootFolder(owner, { name: 'Open-Root' })).json.id;
     const closed = (await owner.call('POST', '/folders', { parent: root, name: 'Closed-Child' })).json.id;
     await owner.call('PUT', `/folders/${closed}/inherit`, { inherit: false });
     const u = await makeUser();
@@ -142,7 +142,7 @@ describe('shared with me', () => {
 
   it('viewers never see unpublished documents', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
-    const root = (await owner.call('POST', '/folders', { name: 'Docs-Root' })).json.id;
+    const root = (await rootFolder(owner, { name: 'Docs-Root' })).json.id;
     const doc = (await owner.call('POST', '/docs', { parent: root, name: 'unpublished-doc', content: 'x' })).json.node.id;
     const u = await makeUser();
     await owner.call('POST', `/folders/${root}/grants`, { principal_type: 'user', principal: u.id, role: 'viewer' });
@@ -156,8 +156,8 @@ describe('shared with me', () => {
 describe('move', () => {
   it('needs manager on source and destination, rewrites paths in one batch and warns on access change', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
-    const a = (await owner.call('POST', '/folders', { name: 'Move-A' })).json.id;
-    const b = (await owner.call('POST', '/folders', { name: 'Move-B' })).json.id;
+    const a = (await rootFolder(owner, { name: 'Move-A' })).json.id;
+    const b = (await rootFolder(owner, { name: 'Move-B' })).json.id;
     const f = (await owner.call('POST', '/folders', { parent: a, name: 'payload' })).json.id;
     const inner = (await owner.call('POST', '/folders', { parent: f, name: 'inner' })).json.id;
     const doc = (await owner.call('POST', '/docs', { parent: inner, name: 'd', content: 'x' })).json.node.id;
@@ -172,7 +172,7 @@ describe('move', () => {
     expect(r.json.moved).toBe(3);
     expect(r.json.access_changed).toBe(false);
     const row = await env.DB.prepare('SELECT path FROM nodes WHERE id = ?').bind(doc).first<{ path: string }>();
-    expect(row!.path).toBe(`/${b}/${f}/${inner}/${doc}/`);
+    expect(row!.path).toBe(`/${AREA.documentation}/${b}/${f}/${inner}/${doc}/`);
     const other = await makeUser();
     await owner.call('POST', `/folders/${a}/grants`, { principal_type: 'user', principal: other.id, role: 'viewer' });
     const back = await owner.call('POST', `/nodes/${f}/move`, { to: a });
@@ -182,11 +182,11 @@ describe('move', () => {
 
   it('refuses moving a folder into itself and caps subtree size', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
-    const a = (await owner.call('POST', '/folders', { name: 'Self-A' })).json.id;
+    const a = (await rootFolder(owner, { name: 'Self-A' })).json.id;
     const b = (await owner.call('POST', '/folders', { parent: a, name: 'b' })).json.id;
     expect((await owner.call('POST', `/nodes/${a}/move`, { to: b })).status).toBe(400);
     // Inflate the subtree past the cap with direct inserts.
-    const big = (await owner.call('POST', '/folders', { name: 'Big' })).json.id;
+    const big = (await rootFolder(owner, { name: 'Big' })).json.id;
     const path = (await env.DB.prepare('SELECT path FROM nodes WHERE id = ?').bind(big).first<{ path: string }>())!.path;
     const stmts = [];
     for (let i = 0; i < 5001; i++) {

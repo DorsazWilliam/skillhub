@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers';
 import { unzipSync, gunzipSync, strFromU8 } from 'fflate';
 import { cleanup } from '../src/db/cleanup';
 import type { Env } from '../src/env';
-import { makeUser, sessionClient, tokenClient } from './helpers';
+import { makeUser, sessionClient, tokenClient, rootFolder } from './helpers';
 
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
 const b64 = (u: Uint8Array): string => btoa(String.fromCharCode(...u));
@@ -11,7 +11,7 @@ const b64 = (u: Uint8Array): string => btoa(String.fromCharCode(...u));
 describe('export and cron', () => {
   it('exports the published tree with relative asset links', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
-    const root = (await owner.call('POST', '/folders', { name: 'Export-Root' })).json.id;
+    const root = (await rootFolder(owner, { name: 'Export-Root' })).json.id;
     const sub = (await owner.call('POST', '/folders', { parent: root, name: 'Sub' })).json.id;
     const doc = (await owner.call('POST', '/docs', { parent: sub, name: 'with-image' })).json.node.id;
     const up = await owner.call('POST', `/docs/${doc}/assets`, { data_base64: b64(PNG) });
@@ -22,11 +22,11 @@ describe('export and cron', () => {
     const r = await owner.call('POST', '/export', {});
     expect(r.status).toBe(200);
     const files = unzipSync(Uint8Array.from(atob(r.json.zip_base64), (c) => c.charCodeAt(0)));
-    const md = strFromU8(files['Export-Root/Sub/with-image.md']!);
-    expect(md).toContain(`](../../_assets/${up.json.id}.png)`);
+    const md = strFromU8(files['documentation/Export-Root/Sub/with-image.md']!);
+    expect(md).toContain(`](../../../_assets/${up.json.id}.png)`);
     expect(files[`_assets/${up.json.id}.png`]).toBeTruthy();
     expect(Object.keys(files).some((f) => f.includes('draft-only'))).toBe(false);
-    expect(Object.keys(files)).toContain('_hub/hub-promote.md');
+    expect(Object.keys(files)).toContain('skills/_hub/hub-promote/SKILL.md');
   });
 
   it('export and audit need owner and the admin scope', async () => {
@@ -41,7 +41,7 @@ describe('export and cron', () => {
 
   it('cron deletes orphan assets after 7 days and old audit rows', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
-    const root = (await owner.call('POST', '/folders', { name: 'Cron-Root' })).json.id;
+    const root = (await rootFolder(owner, { name: 'Cron-Root' })).json.id;
     const doc = (await owner.call('POST', '/docs', { parent: root, name: 'd' })).json.node.id;
     const used = await owner.call('POST', `/docs/${doc}/assets`, { data_base64: b64(PNG) });
     const orphan = await owner.call('POST', `/docs/${doc}/assets`, { data_base64: b64(PNG) });
