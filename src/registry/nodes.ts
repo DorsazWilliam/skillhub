@@ -13,6 +13,7 @@ import { sha256Hex } from '../lib/crypto';
 import { ROLE } from '../authz/roles';
 import type { Authz } from '../authz/authorize';
 import { defineOp } from './types';
+import { ListItemOut, listExtras } from './listing';
 import { Cursor, Limit, NodeOut, NodeRef, Page, decodeCursor, encodeCursor, getNodeById, nodeOut, nodeOuts, resolveRef, sharedTops } from './shared';
 
 export function isUnique(e: unknown): boolean {
@@ -66,7 +67,7 @@ export const listChildren = defineOp({
   scope: 'read',
   target: { kind: 'node', field: 'folder', minRole: ROLE.viewer, nodeKind: 'folder', nullable: 'any' },
   input: z.object({ folder: NodeRef.optional(), cursor: Cursor, limit: Limit }),
-  output: Page(NodeOut),
+  output: Page(ListItemOut),
   rest: { method: 'GET', path: '/children' },
   mcp: { tool: 'list_children', readOnly: true },
   handler: async (ctx, input) => {
@@ -77,7 +78,8 @@ export const listChildren = defineOp({
       const start = after ? tops.findIndex((n) => n.id === after[0]) + 1 : 0;
       const slice = tops.slice(start, start + limit);
       const next = start + limit < tops.length ? encodeCursor([slice[slice.length - 1]!.id]) : null;
-      return { items: await nodeOuts(ctx.az, slice), next_cursor: next };
+      const topRoles = await ctx.az.roles(slice);
+      return { items: await listExtras(ctx.az, slice, await nodeOuts(ctx.az, slice, topRoles), topRoles), next_cursor: next };
     }
     const after = decodeCursor(input.cursor);
     const rows = after
@@ -104,7 +106,7 @@ export const listChildren = defineOp({
     const next = rows.length > limit && last ? encodeCursor([last.kind === 'folder' ? 0 : 1, last.name.toLowerCase(), last.id]) : null;
     const roles = await ctx.az.roles(page);
     const readable = page.filter((n) => (roles.get(n.id) ?? 0) > 0);
-    return { items: await nodeOuts(ctx.az, readable, roles), next_cursor: next };
+    return { items: await listExtras(ctx.az, readable, await nodeOuts(ctx.az, readable, roles), roles), next_cursor: next };
   },
 });
 

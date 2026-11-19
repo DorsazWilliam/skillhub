@@ -4,6 +4,7 @@ import { buildApp } from './app';
 import { mcpHandler } from './mcp/server';
 import { SCOPES } from './authz/scopes';
 import { cleanup } from './db/cleanup';
+import { devLoginEnabled } from './auth/dev';
 
 const app = buildApp();
 
@@ -66,7 +67,8 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const ip = request.headers.get('cf-connecting-ip');
-    if (env.RATE_LIMITER && ip && RATE_LIMITED.test(url.pathname)) {
+    // The local dev stack (DEV_LOGIN on localhost) is not rate limited: seeding and the e2e suite make bursts of calls.
+    if (env.RATE_LIMITER && ip && RATE_LIMITED.test(url.pathname) && !devLoginEnabled(env)) {
       const { success } = await env.RATE_LIMITER.limit({ key: `${ip}:${url.pathname.split('/')[1] ?? ''}` });
       if (!success) return secure(Response.json({ error: { code: 'rate_limited', message: 'Too many requests' } }, { status: 429, headers: { 'retry-after': '60' } }));
     }

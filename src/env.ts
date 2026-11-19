@@ -17,6 +17,8 @@ export interface Env {
   OWNER_EMAILS?: string;
   MCP_MAX_SCOPES?: string;
   CATALOG_IN_TOOL_DESC?: string;
+  /** Local development only: enables /auth/dev-login when BASE_URL is localhost. Never set in wrangler.jsonc. */
+  DEV_LOGIN?: string;
 
   ENTRA_CLIENT_SECRET: string;
   SESSION_SECRET: string;

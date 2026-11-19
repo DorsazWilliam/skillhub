@@ -4,11 +4,13 @@ import { restApp } from './http/rest';
 import { uiApp } from './http/ui';
 import { assetApp } from './http/assets';
 import { authApp } from './auth/routes';
+import { devApp } from './auth/dev';
 
 /** Everything that is not /mcp and not an OAuth protocol endpoint. */
 export function buildApp(): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.get('/healthz', (c) => c.json({ ok: true }, 200, { 'cache-control': 'no-store' }));
+  app.route('/', devApp());
   app.route('/', authApp());
   app.route('/', assetApp());
   app.route('/api/v1/ui', uiApp());

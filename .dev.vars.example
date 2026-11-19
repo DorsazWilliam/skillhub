@@ -1,3 +1,5 @@
 BASE_URL=http://localhost:8787
 ENTRA_CLIENT_SECRET=replace-me
 SESSION_SECRET=replace-with-64-random-hex-chars
+# Local only: sign in as owner, publisher or viewer without Entra. Refused unless BASE_URL is localhost or 127.0.0.1.
+DEV_LOGIN=true

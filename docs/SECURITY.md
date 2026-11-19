@@ -28,6 +28,10 @@ Review publisher grants like you review production deploy rights.
 - Uploads: type sniffed from magic bytes (png, jpeg, webp, gif only). SVG rejected. 5 MB cap (1 MB over MCP). Served from `/a/:id` only after authorization, with `nosniff`, `Content-Disposition: inline`, `Content-Security-Policy: sandbox`, private cache. Viewers can only fetch images referenced by the published version.
 - Rate limiting on `/mcp`, `/api`, `/auth`, `/authorize`, `/token`, `/register` per client IP.
 
+## Local development sign-in
+
+Entra cannot run locally without a tenant, so the Worker has a DEV-ONLY sign-in at `/auth/dev-login` (owner, publisher, viewer from a fixed list: Alice Chen, Marcus Webb, Tom Becker, with tenant id `dev-local`). It is enabled only when both hold: the variable `DEV_LOGIN` is `true`, and `BASE_URL` has the host `localhost` or `127.0.0.1`. Otherwise both routes answer 404 (unit tested in `test/devlogin.test.ts`). `DEV_LOGIN` lives only in `.dev.vars` (gitignored, see `.dev.vars.example`) and is never set in `wrangler.jsonc`; a deployment on a real hostname cannot turn it on even by mistake, because `BASE_URL` must match its route. The POST requires the CSRF header and the `BASE_URL` origin like every other cookie mutation, and is audited as `login` with `{dev: true}`. With the same two conditions the per-IP rate limiter is skipped, so seeding and the end-to-end suite are not throttled.
+
 ## Secrets
 
 Only Wrangler secrets: `ENTRA_CLIENT_SECRET`, `SESSION_SECRET`. Nothing secret in `brand.json`, `wrangler.jsonc` or the repo. Logs are structured JSON without tokens or document bodies. The audit log never stores document content.

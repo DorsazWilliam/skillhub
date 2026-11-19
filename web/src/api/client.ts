@@ -83,6 +83,20 @@ export type ListChildrenOutput = {
     head_version?: number | null;
     has_draft?: boolean | null;
     updated_at: number;
+    skill?: {
+      name: string | null;
+      description: string | null;
+      version: number | null;
+      files: number;
+      state: "published" | "pending" | "draft" | "unpublished" | null;
+      pending: number;
+    } | null;
+    author?: {
+      id: string;
+      name: string | null;
+    } | null;
+    links?: number;
+    children?: number;
   }>;
   next_cursor: string | null;
 };
