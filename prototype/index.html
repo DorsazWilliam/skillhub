@@ -544,6 +544,7 @@ table.t .num{font-variant-numeric:tabular-nums;color:var(--muted);white-space:no
 /* authoring warnings (lint) */
 .lint-btn{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 8px;border-radius:8px;color:var(--warn);background:var(--warn-soft);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;margin-right:4px;flex:none}
 .lint-btn:hover{background:color-mix(in srgb,var(--warn) 22%,transparent)}
+.lint-btn.off{color:var(--faint);background:var(--sunken)}
 .lint-i{display:flex;align-items:center;gap:9px;padding:4px 4px 4px 9px;border-radius:7px;font-size:13px;color:var(--fg-2);min-width:240px}
 .lint-i>.i{color:var(--warn)}.lint-i.broken>.i{color:var(--danger)}
 .ln-i .lx{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;margin-right:-4px;color:inherit;opacity:.7}
@@ -1730,12 +1731,12 @@ const DATED=new RegExp('\\b(?:before|after|until)\\s+(?:'+MONTHS+')\\.?\\s+\\d{4
 function rulesBytes(){return DB.nodes.filter(n=>n.kind==='doc'&&n.published&&isDesc(n.id,'A_rules')&&alive(n.id)).reduce((s,n)=>s+bytes(vContent(n,n.published)),0)}
 function hasToc(L){const top=L.slice(0,25);return top.some(l=>/^#{1,4}\s*(contents|table of contents|on this page|toc)\b/i.test(l))||top.filter(l=>/^\s*(?:[-*]|\d+\.)\s*\[[^\]]+\]\(#/.test(l)).length>=3}
 function lintContent(d){const v=currentView(d);return v==null?'':vContent(d,v)}
-function lintAll(n,content){if(!n)return[];const out=[];const add=(code,msg,kind='warn')=>out.push({code,msg,kind});
+function lintAll(n,content){if(!n)return[];const out=[];const add=(code,msg,kind='warn',fp)=>out.push({code,msg,kind,key:code+'|'+(fp??msg)});
  if(n.kind==='folder'){if(n.id==='A_rules'&&rulesBytes()>RULES_CAP)add('rules-cap','Rules over 8 KB');return out}
  if(isCode(n))return out;if(content==null)content=lintContent(n);const a=areaOf(n.id);
  if(isSkillMd(n)){const{fm,body}=splitFM(content);const name=fm?.name||'',desc=fm?.description||'';
-  if(desc&&!/\bwhen\b/i.test(desc))add('desc-trigger','Description: say when to use it');
-  if(/\bI\b/.test(desc)||/\b(you|your)\b/i.test(desc))add('desc-person','Description: write in third person');
+  if(desc&&!/\bwhen\b/i.test(desc))add('desc-trigger','Description: say when to use it','warn',desc);
+  if(/\bI\b/.test(desc)||/\b(you|your)\b/i.test(desc))add('desc-person','Description: write in third person','warn',desc);
   if(body.split('\n').length>500)add('body-long','Over 500 lines: split into files');
   if(/^(helpers?|utils?|tools?|documents?|data|files?)$/.test(name))add('name-vague','Vague name');
   if(/claude|anthropic/i.test(name))add('name-reserved','Reserved word in name');
@@ -1746,10 +1747,11 @@ function lintAll(n,content){if(!n)return[];const out=[];const add=(code,msg,kind
  if(a==='docs'){const L=content.split('\n');if(L.length>100&&!hasToc(L))add('toc-missing','Long page: add contents')}
  const seen=new Set();for(const l of extractLinks(content)){if(seen.has(l.path))continue;seen.add(l.path);const c=classify(n,l.path);if(c.st==='warn')add('link:'+l.path,'Wrong direction: '+l.path);else if(c.st==='broken')add('link:'+l.path,'Not found: '+l.path,'broken');else if(c.st==='locked')add('link:'+l.path,'Locked link','broken')}
  return out}
-function lintActive(n,content){if(!n||role(n.id)<2)return[];const ig=n.lintIgnore;return lintAll(n,content).filter(x=>!ig||!ig.has(x.code))}
-function lintBtn(n){const L=lintActive(n);if(!L.length)return '';return `<button class="lint-btn" data-a="menu" data-m="lint" data-id="${n.id}" aria-label="${L.length} warnings" data-tip="Guidelines">${ic('alert',13)}${L.length}</button>`}
-function lintItem(n,x,chip){if(chip)return `<span class="ln-i ${x.kind}">${ic(x.kind==='broken'?'link-off':'alert',13)}<span>${esc(x.msg)}</span><button class="lx" data-a="lint-dismiss" data-id="${n.id}" data-code="${esc(x.code)}" aria-label="Dismiss" data-tip="Dismiss">${ic('x',12)}</button></span>`;
- return `<div class="lint-i ${x.kind}">${ic(x.kind==='broken'?'link-off':'alert',14)}<span class="grow">${esc(x.msg)}</span><button class="ib xs" data-a="lint-dismiss" data-id="${n.id}" data-code="${esc(x.code)}" aria-label="Dismiss" data-tip="Dismiss">${ic('x',13)}</button></div>`}
+/* a dismissal is keyed on the warning and the text it flags, so it survives new versions until that text changes */
+function lintActive(n,content){if(!n||role(n.id)<2)return[];const all=lintAll(n,content);const ig=n.lintIgnore;if(ig)for(const k of [...ig])if(!k.includes('|')){ig.delete(k);for(const x of all)if(x.code===k)ig.add(x.key)}return all.filter(x=>!ig||!ig.has(x.key))}
+function lintBtn(n){const L=lintActive(n);if(!L.length){const k=role(n.id)>=2&&n.lintIgnore?lintAll(n).filter(x=>n.lintIgnore.has(x.key)).length:0;return k?`<button class="lint-btn off" data-a="menu" data-m="lint" data-id="${n.id}" aria-label="${k} dismissed" data-tip="Dismissed">${ic('eye-off',13)}${k}</button>`:''}return `<button class="lint-btn" data-a="menu" data-m="lint" data-id="${n.id}" aria-label="${L.length} warnings" data-tip="Guidelines">${ic('alert',13)}${L.length}</button>`}
+function lintItem(n,x,chip){if(chip)return `<span class="ln-i ${x.kind}">${ic(x.kind==='broken'?'link-off':'alert',13)}<span>${esc(x.msg)}</span><button class="lx" data-a="lint-dismiss" data-id="${n.id}" data-code="${esc(x.key)}" aria-label="Dismiss" data-tip="Dismiss">${ic('x',12)}</button></span>`;
+ return `<div class="lint-i ${x.kind}">${ic(x.kind==='broken'?'link-off':'alert',14)}<span class="grow">${esc(x.msg)}</span><button class="ib xs" data-a="lint-dismiss" data-id="${n.id}" data-code="${esc(x.key)}" aria-label="Dismiss" data-tip="Dismiss">${ic('x',13)}</button></div>`}
 /* live warnings in the editor (links included) */
 function linkNotesHtml(d,content){if(isCode(d))return '';const L=lintActive(d,content);return L.length?`<div class="lnotes">${L.map(x=>lintItem(d,x,true)).join('')}</div>`:''}
 function updateLinkNotes(){const E=S.edit;if(!E)return;const el=$('#ed-links');if(el)el.innerHTML=linkNotesHtml(N(E.id),editContent(N(E.id),E))}
