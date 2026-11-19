@@ -20,7 +20,7 @@ npm run setup
 
 ## CI
 
-Both `.github/workflows/deploy.yml` and `bitbucket-pipelines.yml` run typecheck, parity, tests, then on `main` apply migrations and deploy. Set `CLOUDFLARE_API_TOKEN` (Workers, D1, R2, KV edit permissions on the account, plus Zone DNS edit for the custom domain) and `CLOUDFLARE_ACCOUNT_ID` as secrets.
+Both `.github/workflows/deploy.yml` and `bitbucket-pipelines.yml` run typecheck, parity, tests, then on `main` apply migrations and deploy. On GitHub, deploying is opt-in: set the repository variable `DEPLOY_ENABLED` to `true`. Set `CLOUDFLARE_API_TOKEN` (Workers, D1, R2, KV edit permissions on the account, plus Zone DNS edit for the custom domain) and `CLOUDFLARE_ACCOUNT_ID` as secrets.
 
 Migrations must be backward compatible with the version still running: add columns and tables, backfill, and remove only in a later release.
 
