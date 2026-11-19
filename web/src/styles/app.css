@@ -1,0 +1,56 @@
+/* Additions to the prototype stylesheet (prototype.css is the approved design, copied verbatim). */
+
+/* search results as a page (/search) */
+.sres-page{position:relative}
+.sres-page .sres{position:static;box-shadow:none;max-height:none;animation:none;border-radius:12px}
+
+/* local sign-in buttons (dev only) */
+.dev-login{width:100%;border:1px solid var(--border);border-radius:12px;padding:4px;background:var(--panel);text-align:left}
+.dev-login .mlbl{padding:6px 9px 4px}
+.dev-login .mi:disabled{opacity:.6}
+
+/* confirm state on phone bar buttons */
+.mb.armed{background:var(--danger);width:auto;padding:0 10px;gap:6px;display:inline-flex;align-items:center;font-size:12.5px;font-weight:500}
+
+/* Milkdown (ProseMirror) inside the prototype's .md.editable surface */
+.editable .milkdown{outline:none}
+.editable .ProseMirror{outline:none;min-height:50vh;white-space:pre-wrap;word-wrap:break-word;font-variant-ligatures:none}
+.editable .ProseMirror>*:first-child{margin-top:0}
+.editable .ProseMirror li>p{margin:0}
+.editable .ProseMirror figure{position:relative}
+.editable .ProseMirror figure:hover{outline:2px solid var(--accent-soft);border-radius:10px}
+.editable .ProseMirror .tableWrapper{overflow-x:auto;margin:0 0 16px;border:1px solid var(--border);border-radius:10px}
+.editable .ProseMirror table{border-collapse:collapse;width:100%;font-size:13.5px}
+.editable .ProseMirror th,.editable .ProseMirror td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);vertical-align:top}
+.editable .ProseMirror th{font-weight:600;color:var(--fg);background:var(--bg)}
+.editable .ProseMirror th>p,.editable .ProseMirror td>p{margin:0}
+.editable .ProseMirror .selectedCell{background:var(--accent-soft)}
+.editable .ProseMirror-selectednode{outline:2px solid var(--accent);outline-offset:1px;border-radius:6px}
+.editable .ProseMirror-hideselection *::selection{background:transparent}
+.editable .ProseMirror-gapcursor{display:none;pointer-events:none;position:absolute}
+.editable .ProseMirror-gapcursor:after{content:"";display:block;position:absolute;top:-2px;width:20px;border-top:1px solid var(--fg);animation:gapcursor 1.1s steps(2,start) infinite}
+@keyframes gapcursor{to{visibility:hidden}}
+.editable .ProseMirror-focused .ProseMirror-gapcursor{display:block}
+.editable .crepe-placeholder{position:relative}
+.editable .crepe-placeholder::before{position:absolute;color:var(--faint);pointer-events:none;height:0;content:attr(data-placeholder)}
+.editable .wl{user-select:none}
+
+/* CodeMirror inside the prototype's .raw surface */
+div.raw{padding:0;min-height:0;resize:none;overflow:hidden}
+.raw:focus-within{border-color:var(--accent)}
+.raw .cm-editor{background:transparent;color:var(--fg);min-height:60vh}
+.raw .cm-editor.cm-focused{outline:none}
+.raw .cm-scroller{font-family:var(--mono);font-size:13px;line-height:1.65}
+.raw .cm-content{padding:14px 0;caret-color:var(--fg)}
+.raw .cm-line{padding:0 16px}
+.raw .cm-cursor,.raw .cm-dropCursor{border-left-color:var(--fg)}
+.raw .cm-selectionBackground,.raw .cm-focused .cm-selectionBackground,.raw .cm-content ::selection{background:var(--accent-soft)!important}
+.raw .cm-placeholder{color:var(--faint)}
+.raw.codeed .cm-content{white-space:pre}
+@media (max-width:767px){
+  .m-ed div.raw .cm-editor{min-height:50vh;font-size:16px}
+  .m-ed .raw .cm-scroller{font-size:15px}
+}
+
+/* the app never scrolls the document itself (focus must not shift the shell) */
+html{overflow:hidden}

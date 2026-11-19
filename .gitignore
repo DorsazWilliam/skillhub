@@ -5,3 +5,6 @@ web/dist/
 dist/
 coverage/
 *.log
+test-results/
+playwright-report/
+e2e/test-results/
