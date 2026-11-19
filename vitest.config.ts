@@ -14,7 +14,7 @@ export default defineConfig(async () => {
             ENTRA_TENANT_ID: '11111111-1111-1111-1111-111111111111',
             ENTRA_ALLOWED_TENANTS: '',
             ENTRA_CLIENT_ID: '22222222-2222-2222-2222-222222222222',
-            OWNER_EMAILS: 'owner@contoso.test',
+            OWNER_EMAILS: 'owner@acme.test',
             ALLOW_GUESTS: 'false',
             ENTRA_CLIENT_SECRET: 'test-secret',
             SESSION_SECRET: 'test-session-secret-0123456789abcdef0123456789abcdef',

@@ -25,7 +25,7 @@ beforeAll(async () => {
 async function token(claims: Record<string, unknown> = {}, opts: { iss?: string; aud?: string; exp?: number } = {}): Promise<string> {
   const tid = (claims['tid'] as string | undefined) ?? TID;
   const now = Math.floor(Date.now() / 1000);
-  return new SignJWT({ tid, oid: '33333333-3333-3333-3333-333333333333', nonce: 'n1', email: 'alice@contoso.test', name: 'Alice', ...claims })
+  return new SignJWT({ tid, oid: '33333333-3333-3333-3333-333333333333', nonce: 'n1', email: 'alice@acme.test', name: 'Alice', ...claims })
     .setProtectedHeader({ alg: 'RS256', kid: 'k1' })
     .setIssuer(opts.iss ?? `https://login.microsoftonline.com/${tid}/v2.0`)
     .setAudience(opts.aud ?? AUD)
@@ -48,7 +48,7 @@ async function rejects(p: Promise<unknown>, code?: string): Promise<void> {
 describe('Entra id_token validation (SPEC 5.2)', () => {
   it('accepts a valid token', async () => {
     const id = await validateIdToken(cfg, await token(), { nonce: 'n1', keys });
-    expect(id).toMatchObject({ tid: TID, oid: '33333333-3333-3333-3333-333333333333', email: 'alice@contoso.test', guest: false });
+    expect(id).toMatchObject({ tid: TID, oid: '33333333-3333-3333-3333-333333333333', email: 'alice@acme.test', guest: false });
   });
 
   it('rejects a token from another tenant', async () => {
@@ -80,7 +80,7 @@ describe('Entra id_token validation (SPEC 5.2)', () => {
 
   it('email domain filter only restricts', async () => {
     await rejects(validateIdToken({ ...cfg, ALLOWED_EMAIL_DOMAINS: 'fabrikam.test' }, await token(), { nonce: 'n1', keys }), 'forbidden');
-    await expect(validateIdToken({ ...cfg, ALLOWED_EMAIL_DOMAINS: 'contoso.test' }, await token(), { nonce: 'n1', keys })).resolves.toBeTruthy();
+    await expect(validateIdToken({ ...cfg, ALLOWED_EMAIL_DOMAINS: 'acme.test' }, await token(), { nonce: 'n1', keys })).resolves.toBeTruthy();
   });
 
   it('multi-tenant mode validates issuer per token tid against the allowlist', async () => {
@@ -94,22 +94,22 @@ describe('Entra id_token validation (SPEC 5.2)', () => {
 describe('users', () => {
   it('keys on (tid, oid): a changed email maps to the same user', async () => {
     const oid = crypto.randomUUID();
-    const a = await upsertUser(env, { tid: TID, oid, email: 'old@contoso.test', name: 'Bob', guest: false });
-    const b = await upsertUser(env, { tid: TID, oid, email: 'new@contoso.test', name: 'Bob B', guest: false });
+    const a = await upsertUser(env, { tid: TID, oid, email: 'old@acme.test', name: 'Bob', guest: false });
+    const b = await upsertUser(env, { tid: TID, oid, email: 'new@acme.test', name: 'Bob B', guest: false });
     expect(b.id).toBe(a.id);
-    expect(b.email).toBe('new@contoso.test');
+    expect(b.email).toBe('new@acme.test');
   });
 
   it('a different oid with the same email is a different user', async () => {
-    const a = await upsertUser(env, { tid: TID, oid: crypto.randomUUID(), email: 'same@contoso.test', name: 'X', guest: false });
-    const b = await upsertUser(env, { tid: TID, oid: crypto.randomUUID(), email: 'same@contoso.test', name: 'Y', guest: false });
+    const a = await upsertUser(env, { tid: TID, oid: crypto.randomUUID(), email: 'same@acme.test', name: 'X', guest: false });
+    const b = await upsertUser(env, { tid: TID, oid: crypto.randomUUID(), email: 'same@acme.test', name: 'Y', guest: false });
     expect(a.id).not.toBe(b.id);
   });
 
   it('bootstraps OWNER_EMAILS as owner on first login only', async () => {
-    const u = await upsertUser(env, { tid: TID, oid: crypto.randomUUID(), email: 'owner@contoso.test', name: 'O', guest: false });
+    const u = await upsertUser(env, { tid: TID, oid: crypto.randomUUID(), email: 'owner@acme.test', name: 'O', guest: false });
     expect(u.org_role).toBe('owner');
-    const m = await upsertUser(env, { tid: TID, oid: crypto.randomUUID(), email: 'member@contoso.test', name: 'M', guest: false });
+    const m = await upsertUser(env, { tid: TID, oid: crypto.randomUUID(), email: 'member@acme.test', name: 'M', guest: false });
     expect(m.org_role).toBe('member');
   });
 

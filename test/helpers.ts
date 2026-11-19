@@ -15,7 +15,7 @@ export async function makeUser(opts: { role?: 'owner' | 'member'; status?: 'acti
     id: ulid(),
     tid: '11111111-1111-1111-1111-111111111111',
     oid: crypto.randomUUID(),
-    email: opts.email ?? `user${seq}-${Math.random().toString(36).slice(2, 7)}@contoso.test`,
+    email: opts.email ?? `user${seq}-${Math.random().toString(36).slice(2, 7)}@acme.test`,
     name: opts.name ?? `User ${seq}`,
     org_role: opts.role ?? 'member',
     status: opts.status ?? 'active',

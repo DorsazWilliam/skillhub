@@ -1,6 +1,6 @@
 # Deploying
 
-SkillHub runs as one Worker on a hostname in a zone you already have on Cloudflare (for example `skills.contoso.com` under `contoso.com`). The route in `wrangler.jsonc` is a Custom Domain, so Cloudflare creates the DNS record and certificate on deploy.
+SkillHub runs as one Worker on a hostname in a zone you already have on Cloudflare (for example `skills.acme.com` under `acme.com`). The route in `wrangler.jsonc` is a Custom Domain, so Cloudflare creates the DNS record and certificate on deploy.
 
 ## First deploy
 
