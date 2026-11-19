@@ -369,7 +369,7 @@ const AuditRowOut = z.object({
 
 export const listAudit = defineOp({
   name: 'list_audit',
-  summary: 'Read the audit log with filters, newest first.',
+  summary: 'Read the last 7 days of the audit log with filters, newest first. Older rows are archived to R2 under audit/.',
   scope: 'admin',
   target: { kind: 'org' },
   input: z.object({

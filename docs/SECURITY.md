@@ -32,6 +32,12 @@ Review publisher grants like you review production deploy rights.
 
 Only Wrangler secrets: `ENTRA_CLIENT_SECRET`, `SESSION_SECRET`. Nothing secret in `brand.json`, `wrangler.jsonc` or the repo. Logs are structured JSON without tokens or document bodies. The audit log never stores document content.
 
+Audit retention: 7 days in D1, then gzipped NDJSON in R2 under `audit/` (see DECISIONS 18). To cap how long the archive is kept, add an R2 lifecycle rule:
+
+```powershell
+npx wrangler r2 bucket lifecycle add <bucket> audit-retention audit/ --expire-days 365
+```
+
 ## Personal data and deletion
 
 Stored per user: Entra `tid`, `oid`, display name, email, timestamps. To delete a user (for example a GDPR request), an owner first suspends them in People, then runs:
@@ -39,6 +45,8 @@ Stored per user: Entra `tid`, `oid`, display name, email, timestamps. To delete 
 ```powershell
 npx wrangler d1 execute DB --remote --command "UPDATE audit_log SET actor_id = NULL, detail = json_set(coalesce(detail,'{}'), '$.anonymized', 1) WHERE actor_id = '<USER_ID>'; DELETE FROM grants WHERE principal_type = 'user' AND principal_id = '<USER_ID>'; DELETE FROM users WHERE id = '<USER_ID>';"
 ```
+
+This only covers the last 7 days in D1. Archived files under `audit/` in R2 still contain the user id; rewrite or delete the affected files, or rely on the lifecycle rule above.
 
 Sessions, tokens and team memberships cascade. Versions they authored keep the opaque `author_id`, which no longer resolves to a person. Revoke their MCP connections from their account before deleting, or wait for refresh tokens to expire (30 days idle).
 

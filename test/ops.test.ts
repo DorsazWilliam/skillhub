@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { env } from 'cloudflare:workers';
-import { unzipSync, strFromU8 } from 'fflate';
+import { unzipSync, gunzipSync, strFromU8 } from 'fflate';
 import { cleanup } from '../src/db/cleanup';
 import type { Env } from '../src/env';
 import { makeUser, sessionClient, tokenClient } from './helpers';
@@ -56,5 +56,30 @@ describe('export and cron', () => {
     expect(byId.get(orphan.json.id)).not.toBeNull();
     expect(await env.BUCKET.get(`assets/${orphan.json.id}`)).toBeNull();
     expect(await env.DB.prepare("SELECT 1 FROM audit_log WHERE id = 'OLDAUDIT'").first()).toBeNull();
+  });
+
+  it('archives audit rows older than 7 days to R2 as gzipped NDJSON, then deletes them', async () => {
+    const now = Date.now();
+    const old = now - 8 * 86400 * 1000;
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO audit_log (id, ts, via, op, ok, detail) VALUES ('ARCH1', ?, 'mcp', 'get_skill', 1, '{\"q\":\"x\"}')").bind(old),
+      env.DB.prepare("INSERT INTO audit_log (id, ts, via, op, ok) VALUES ('ARCH2', ?, 'ui', 'publish_version', 1)").bind(old + 1),
+      env.DB.prepare("INSERT INTO audit_log (id, ts, via, op, ok) VALUES ('KEEP1', ?, 'ui', 'get_skill', 1)").bind(now - 86400 * 1000),
+    ]);
+    const res = await cleanup(env as unknown as Env, now);
+    expect(res.audit).toBeGreaterThanOrEqual(2);
+    expect(await env.DB.prepare("SELECT 1 FROM audit_log WHERE id IN ('ARCH1','ARCH2')").first()).toBeNull();
+    expect(await env.DB.prepare("SELECT 1 FROM audit_log WHERE id = 'KEEP1'").first()).not.toBeNull();
+    const lines: Record<string, unknown>[] = [];
+    for (const key of res.files) {
+      expect(key).toMatch(/^audit\/\d{4}\/\d{2}\/\d{2}\/.+\.ndjson\.gz$/);
+      const obj = await env.BUCKET.get(key);
+      const text = strFromU8(gunzipSync(new Uint8Array(await obj!.arrayBuffer())));
+      for (const l of text.trim().split('\n')) lines.push(JSON.parse(l));
+    }
+    const a1 = lines.find((l) => l.id === 'ARCH1');
+    expect(a1).toMatchObject({ op: 'get_skill', via: 'mcp', detail: { q: 'x' } });
+    expect(lines.some((l) => l.id === 'ARCH2')).toBe(true);
+    expect(lines.some((l) => l.id === 'KEEP1')).toBe(false);
   });
 });

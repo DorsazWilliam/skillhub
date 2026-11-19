@@ -35,6 +35,7 @@ SPEC.md is the source of truth. Every deviation or interpretation is recorded he
 15. **Rate limiting** keys on client IP and path prefix, and is skipped when there is no `cf-connecting-ip` (local tests).
 16. **Assets** are served with `Content-Security-Policy: sandbox` in addition to SPEC 9 headers.
 17. **Etags** are random per write, not content hashes, so two identical saves still detect interleaving.
+18. **Audit archiving.** D1 keeps 7 days of audit rows. The cron runs twice a day (03:17 and 15:17 UTC) and moves older rows to R2 as gzipped NDJSON, oldest first, 5,000 rows per file and at most 100,000 rows per run, under `audit/YYYY/MM/DD/<first-id>_<last-id>.ndjson.gz`. Each file is written before its rows are deleted, and a retry overwrites the same key, so a failed run neither loses nor duplicates rows. This replaces the SPEC's 365-day delete. `list_audit` and the Audit page show the last 7 days; older history is read from R2. Retention of the archive is an R2 lifecycle rule on the `audit/` prefix, set per instance.
 
 ## UI
 

@@ -734,7 +734,7 @@ export type ListTeamAccessOutput = {
   }>;
 };
 
-/** Read the audit log with filters, newest first. (scope: admin) */
+/** Read the last 7 days of the audit log with filters, newest first. Older rows are archived to R2 under audit/. (scope: admin) */
 export type ListAuditInput = {
   actor?: string;
   op?: string;

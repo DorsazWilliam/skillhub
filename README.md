@@ -12,7 +12,7 @@ The Deploy button works when the repository is public. For a private repository 
 - **Access like Google Drive.** Viewer, Editor, Publisher, Manager on folders, inherited down the tree, with "don't inherit" boundaries. Teams like GitHub orgs. Viewers only ever see published content.
 - **One registry, three surfaces.** Every operation is a REST endpoint, an MCP tool and a typed client call, generated from `src/registry`. `node scripts/check-parity.mjs` enforces it.
 - **MCP for chat clients.** OAuth 2.1 with our own consent page and scope checkboxes. Tool lists are filtered by scope. `find_skills` carries a live catalog of the caller's skills.
-- **Audit.** Every call, including skill reads, is logged without document bodies.
+- **Audit.** Every call, including skill reads, is logged without document bodies. The last 7 days stay queryable in the app; older rows are archived to R2 as gzipped NDJSON twice a day.
 
 ## Quick start
 
