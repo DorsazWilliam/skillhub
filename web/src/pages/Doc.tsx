@@ -9,7 +9,7 @@ import { startEdit, discardDraft, goNode, isMobile } from '../actions';
 import { useUsers, role, type NodeT, type Skill } from '../api/hooks';
 import { useDocModel, useDraftInfo, useLint, pendingFiles, skillMeta, type DocModel } from './docModel';
 import { Crumbs } from './Crumbs';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 
 const Editor = lazy(() => import('../editor/Editor'));
 
@@ -41,38 +41,75 @@ export function LintBtn({ node, v }: { node: NodeT | undefined; v: number | 'dra
   );
 }
 
-/** Version pill (prototype pillHtml). */
-export function Pill({ node }: { node: NodeT }): ReactElement {
+/** Version status as quiet text: "Published v3", newer versions and drafts in a word. Opens History. */
+export function VersionText({ node }: { node: NodeT }): ReactElement {
   const h = node.head_version ?? 0;
   const p = node.published_version ?? null;
-  const tip = (p ? 'Published v' + p : 'Not published') + (h > (p ?? 0) ? ', ' + (h - (p ?? 0)) + ' newer' : '') + (node.has_draft ? ', draft' : '');
+  const newer = h - (p ?? 0);
+  const tip = (p ? 'Published v' + p : 'Not published') + (newer > 0 ? ', ' + newer + ' newer' : '') + (node.has_draft ? ', draft' : '');
   return (
-    <button className="pill-btn" aria-label="Versions" data-tip={tip} onClick={(e) => openMenu('versions', e.currentTarget, node.id)}>
+    <button
+      className="vtext"
+      aria-label="Versions"
+      data-tip={tip}
+      onClick={(e) => (isMobile() ? openMenu('versions', e.currentTarget, node.id) : setUI({ drawer: 'history', menu: null }))}
+    >
+      <span className={'d' + (p ? (newer > 0 || node.has_draft ? ' warn' : '') : ' off')} />
       {p ? (
-        <span className="pp ok">
-          <Ic n="check" s={11} />v{p}
+        <span>
+          Published <b>v{p}</b>
         </span>
       ) : (
-        <span className="pp mute">
-          <Ic n="eye-off" s={11} />
-        </span>
+        <span>Not published</span>
       )}
-      {h > (p ?? 0) ? <span className="pp warn">+{h - (p ?? 0)}</span> : null}
-      {node.has_draft ? <span className="pp dot" /> : null}
-      <Ic n="chev-d" s={13} />
+      {newer > 0 ? <span className="vn2">+{newer}</span> : null}
     </button>
   );
 }
 
-/** Skill header: name, description, and every file of the skill one click away (prototype skillHead). */
+type SkillFile = NonNullable<Skill['files']>[number];
+type Tab = { key: string; label: string; icon: string; files?: { f: SkillFile; label: string }[]; go?: string; sub?: boolean };
+
+/** Tabs of the skill's own top level: SKILL.md, sub-skills, then each folder (and any other root file). */
+function skillTabs(files: SkillFile[]): Tab[] {
+  const md = files.find((f) => f.path === 'SKILL.md');
+  const subs = files.filter((f) => f.kind === 'skill');
+  const folders = new Map<string, { f: SkillFile; label: string }[]>();
+  const roots: SkillFile[] = [];
+  for (const f of files) {
+    if (f === md || f.kind === 'skill') continue;
+    const i = f.path.indexOf('/');
+    if (i < 0) roots.push(f);
+    else {
+      const k = f.path.slice(0, i);
+      folders.set(k, [...(folders.get(k) ?? []), { f, label: f.path.slice(i + 1) }]);
+    }
+  }
+  const tabs: Tab[] = [];
+  if (md) tabs.push({ key: 'md', label: 'SKILL.md', icon: 'file', go: md.id });
+  if (subs.length) tabs.push({ key: 'subs', label: 'Sub-skills', icon: 'sparkles', files: subs.map((f) => ({ f, label: f.path })), sub: true });
+  for (const [k, v] of [...folders].sort((a, b) => a[0].localeCompare(b[0]))) tabs.push({ key: 'f:' + k, label: k, icon: 'folder', files: v });
+  for (const f of roots) tabs.push({ key: 'r:' + f.id, label: f.path, icon: f.kind === 'file' ? 'file-code' : 'file', go: f.id });
+  return tabs;
+}
+
+/** Skill header: name, description, and the skill's top level as tabs; a folder tab lists its files (prototype skillHead). */
 export function SkillHead({ m }: { m: DocModel }): ReactElement | null {
   const head = m.head;
+  const cur = m.node?.id;
+  const [sel, setSel] = useState<{ at: string | undefined; key: string } | null>(null);
   if (!m.skillId || !head) return null;
   const meta = skillMeta(head);
   const canPub = m.r >= 3;
   const pend = canPub ? pendingFiles(head).length : 0;
   const path = head.path.split('/').filter(Boolean);
   const folderName = path[path.length - 1] ?? '';
+  const tabs = skillTabs(head.files ?? []);
+  const here = tabs.find((t) => t.go === cur || t.files?.some((x) => x.f.id === cur));
+  const key = sel && sel.at === cur ? sel.key : (here?.key ?? 'md');
+  const open = tabs.find((t) => t.key === key);
+  const parent = parentSkill(head);
+  const dirty = (f: SkillFile): boolean => f.kind !== 'skill' && m.r >= 2 && ((f.id === cur && !!m.node?.has_draft) || (f.head_version ?? 0) > (f.published_version ?? 0));
   return (
     <div className="skhead">
       <div className="skt">
@@ -80,10 +117,7 @@ export function SkillHead({ m }: { m: DocModel }): ReactElement | null {
           <Ic n="sparkles" s={17} />
         </span>
         <div className="grow">
-          <div className="row-flex" style={{ gap: 6 }}>
-            <ParentSkill head={head} />
-            <code>{meta.name || folderName}</code>
-          </div>
+          <code>{meta.name || folderName}</code>
           {meta.description ? <p>{meta.description}</p> : null}
         </div>
         {pend ? (
@@ -93,45 +127,49 @@ export function SkillHead({ m }: { m: DocModel }): ReactElement | null {
           </button>
         ) : null}
       </div>
-      <div className="sfiles" role="tablist">
-        {(head.files ?? []).map((f) => {
-          const on = f.id === m.node?.id;
-          const sub = f.kind === 'skill';
-          const dirty = !sub && m.r >= 2 && ((on && m.node?.has_draft) || (f.head_version ?? 0) > (f.published_version ?? 0));
-          const dr = on && !!m.node?.has_draft;
-          return (
-            <button
-              key={f.id}
-              className={'sf' + (on ? ' on' : '') + (sub ? ' sub' : '')}
-              role="tab"
-              aria-selected={on}
-              data-tip={sub ? 'Sub-skill' : undefined}
-              onClick={() => void goNode(f.id)}
-            >
-              <Ic n={sub ? 'sparkles' : f.kind === 'file' ? 'file-code' : 'file'} s={13} />
-              <span>{f.path}</span>
-              {dirty ? <span className={'sfd' + (dr ? ' dr' : '')} /> : null}
-            </button>
-          );
-        })}
+      <div className="stabs" role="tablist">
+        {parent ? (
+          <button className="sback" aria-label={'Back to ' + parent} data-tip={'Back to ' + parent} onClick={() => void goNode('skills/' + parent)}>
+            <Ic n="chev-l" s={14} />
+          </button>
+        ) : null}
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            className={'stab' + (t.key === key ? ' on' : '') + (t.sub ? ' sub' : '')}
+            role="tab"
+            aria-selected={t.key === key}
+            onClick={() => (t.go ? void goNode(t.go) : setSel({ at: cur, key: t.key }))}
+          >
+            <Ic n={t.icon} s={14} />
+            <span>{t.label}</span>
+            {t.files ? <span className="cnt">{t.files.length}</span> : null}
+            {t.go && head.files?.some((f) => f.id === t.go && dirty(f)) ? <span className={'sfd' + (t.go === cur && m.node?.has_draft ? ' dr' : '')} /> : null}
+          </button>
+        ))}
       </div>
+      {open?.files ? (
+        <div className="flist">
+          {open.files.map(({ f, label }) => (
+            <button key={f.id} className={'frow' + (f.id === cur ? ' on' : '') + (f.kind === 'skill' ? ' sub' : '')} onClick={() => void goNode(f.id)}>
+              <Ic n={f.kind === 'skill' ? 'sparkles' : f.kind === 'file' ? 'file-code' : 'file'} s={15} />
+              <span className="fn">{label}</span>
+              <span className="fi">
+                {f.kind === 'skill' ? 'Sub-skill' : f.published_version ? 'v' + f.published_version : 'Not published'}
+                {dirty(f) ? <span className={'sfd' + (f.id === cur && m.node?.has_draft ? ' dr' : '')} /> : null}
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function ParentSkill({ head }: { head: Skill }): ReactElement | null {
-  // A sub-skill's canonical path is skills/<parent>/<path>: link the parent skill by its canonical path.
+/** A sub-skill's canonical path is skills/<parent>/<path>: its parent skill's name, or null. */
+function parentSkill(head: Skill): string | null {
   const c = head.canonical_path?.split('/') ?? [];
-  if (c.length < 3 || c[0] !== 'skills') return null;
-  const parent = c[1]!;
-  return (
-    <>
-      <button className="skp" data-tip="Parent skill" onClick={() => void goNode('skills/' + parent)}>
-        {parent}
-      </button>
-      <Ic n="chev-r" s={12} c="faint" />
-    </>
-  );
+  return c.length >= 3 && c[0] === 'skills' ? c[1]! : null;
 }
 
 export function CodeView({ src, name }: { src: string; name: string }): ReactElement {
@@ -261,7 +299,8 @@ export function DocActs({ m }: { m: DocModel }): ReactElement | null {
       <LintBtn node={node} v={m.v} />
       {r >= 2 ? (
         <>
-          <Pill node={node} />
+          <VersionText node={node} />
+          <span className="sep" />
           <IB icon="pencil" tip="Edit|E" onClick={() => startEdit(node.id)} />
         </>
       ) : null}
@@ -274,7 +313,6 @@ export function DocActs({ m }: { m: DocModel }): ReactElement | null {
       ) : null}
       {r >= 4 && node.parent_id ? <IB icon="user-plus" tip="Share" onClick={() => setUI({ modal: { type: 'share', id: node.parent_id! } })} /> : null}
       <IB className="ib hide-m" icon="link" tip="Copy [[link]]" onClick={() => copyLink(m.content?.canonical_path ?? node.canonical_path)} />
-      <IB icon="panel-right" tip="Details" onClick={() => setUI((s) => ({ drawer: s.drawer ? null : 'links' }))} />
       {r >= 2 ? <IB icon="more" tip="More" onClick={(e) => openMenu('more', e.currentTarget, node.id)} /> : null}
     </div>
   );

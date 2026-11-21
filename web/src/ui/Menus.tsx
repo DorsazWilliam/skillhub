@@ -7,6 +7,7 @@ import { ago } from '../lib/util';
 import { goNode, isMobile, logout, deleteNode, unpublish, dismissWarning, restoreWarnings, narrowMQ } from '../actions';
 import { navigate } from '../router';
 import { copyLink } from '../pages/Doc';
+import { CrumbsMenu } from '../pages/Crumbs';
 import { useInSkill, newKinds, runNew } from '../pages/Folder';
 import { viewFor } from '../pages/docModel';
 import { useTokens, useConns, useTrash, revokeToken, revokeConn, setUserStatus, connName } from '../pages/Admin';
@@ -295,10 +296,32 @@ function UserMenu(): ReactElement {
       ) : null}
       <Mi icon="key" label="API tokens" onClick={() => goTo('/settings/tokens')} />
       <Mi icon="plug" label="Connections" onClick={() => goTo('/settings/connections')} />
-      <Mi icon={isDark() ? 'sun' : 'moon'} label={isDark() ? 'Light' : 'Dark'} onClick={toggleTheme} />
+      <Hr />
+      <ThemeRow />
       <Hr />
       <Mi icon="logout" label="Sign out" onClick={() => void logout()} />
     </>
+  );
+}
+
+/** System, light or dark, in the account menu. */
+function ThemeRow(): ReactElement {
+  const t = useUI((s) => s.theme);
+  const opt = (v: 'light' | 'dark' | null, icon: string, tip: string): ReactElement => (
+    <button className={t === v ? 'on' : ''} aria-label={tip} aria-pressed={t === v} data-tip={tip} onClick={() => setUI({ theme: v })}>
+      <Ic n={icon} s={14} />
+    </button>
+  );
+  return (
+    <div className="mi theme-row" role="group" aria-label="Theme">
+      <Ic n={isDark() ? 'moon' : 'sun'} s={15} />
+      <span>Theme</span>
+      <div className="seg" style={{ marginLeft: 'auto' }}>
+        {opt(null, 'monitor', 'System')}
+        {opt('light', 'sun', 'Light')}
+        {opt('dark', 'moon', 'Dark')}
+      </div>
+    </div>
   );
 }
 
@@ -356,6 +379,8 @@ function MenuBody({ m }: { m: MenuState }): ReactElement | null {
       return <NewMenu id={m.id} />;
     case 'acts':
       return <ActsMenu id={m.id} />;
+    case 'crumbs':
+      return <CrumbsMenu id={m.id} done={() => setUI({ menu: null })} />;
     default:
       return null;
   }

@@ -1,7 +1,7 @@
-import { useRef, type ReactElement } from 'react';
+import { useRef, useState, type ReactElement } from 'react';
 import { Ic } from '../lib/icons';
 import { Av, IB } from '../ui/common';
-import { setUI, useUI, openMenu, isDark, toggleTheme, getUI } from '../state';
+import { setUI, useUI, openMenu, getUI } from '../state';
 import { useRoute, navigate, type Route } from '../router';
 import { useMe, useNode } from '../api/hooks';
 import { goNode, leaveEdit } from '../actions';
@@ -58,8 +58,11 @@ function SearchBox(): ReactElement {
   );
 }
 
-function Top(): ReactElement {
+function Top({ route }: { route: Route }): ReactElement {
   const me = useMe();
+  const nodeId = route.name === 'node' ? route.id : null;
+  const node = useNode(nodeId).data;
+  const drawer = useUI((s) => s.drawer);
   const u = me.data?.user;
   return (
     <header className="top">
@@ -73,6 +76,15 @@ function Top(): ReactElement {
       </div>
       <SearchBox />
       <div className="right">
+        {node ? (
+          <IB
+            className={'ib' + (drawer ? ' on' : '')}
+            icon="panel-right"
+            s={18}
+            tip="Details"
+            onClick={() => setUI((s) => ({ drawer: s.drawer ? null : node.kind === 'doc' ? 'links' : 'access' }))}
+          />
+        ) : null}
         <IB className="ib hide-m" icon="command" tip="Quick open|Ctrl K" onClick={() => setUI({ modal: { type: 'palette', q: '', i: 0 }, menu: null })} />
         <button className="ib" aria-label="Account" data-tip={u?.name ?? u?.email ?? 'Account'} style={{ width: 'auto', padding: '0 4px' }} onClick={(e) => openMenu('user', e.currentTarget, 'me')}>
           <Av name={u?.name ?? u?.email ?? '?'} s={28} />
@@ -117,14 +129,84 @@ function Rail({ route }: { route: Route }): ReactElement {
       <div className="sp" />
       {it('/settings/tokens', 'key', 'API tokens', route.name === 'tokens')}
       {it('/settings/connections', 'plug', 'Connections', route.name === 'connections')}
-      <button className="ib" aria-label="Theme" data-tip="Theme" onClick={toggleTheme}>
-        <Ic n={isDark() ? 'sun' : 'moon'} s={18} />
-      </button>
     </nav>
   );
 }
 
+/** Pane widths, clamped and remembered per browser. */
+const PANES = { tree: { min: 200, max: 480, def: 272 }, drawer: { min: 300, max: 560, def: 352 } } as const;
+type Pane = keyof typeof PANES;
+function savedWidth(p: Pane): number {
+  let v = NaN;
+  try {
+    v = Number(localStorage.getItem('sh-w-' + p));
+  } catch {
+    /* private mode */
+  }
+  const { min, max, def } = PANES[p];
+  return Number.isFinite(v) && v > 0 ? Math.min(max, Math.max(min, v)) : def;
+}
+
+function Resizer({ pane, w, set }: { pane: Pane; w: number; set: (n: number) => void }): ReactElement {
+  const { min, max, def } = PANES[pane];
+  const sign = pane === 'tree' ? 1 : -1;
+  const save = (n: number): void => {
+    try {
+      localStorage.setItem('sh-w-' + pane, String(n));
+    } catch {
+      /* private mode */
+    }
+  };
+  return (
+    <div
+      className={'resizer ' + pane}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={pane === 'tree' ? 'Resize folders' : 'Resize details'}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={w}
+      tabIndex={0}
+      onDoubleClick={() => {
+        set(def);
+        save(def);
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const n = Math.min(max, Math.max(min, w + (e.key === 'ArrowRight' ? 16 : -16) * sign));
+        set(n);
+        save(n);
+      }}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        const el = e.currentTarget;
+        el.setPointerCapture(e.pointerId);
+        const x0 = e.clientX;
+        let n = w;
+        document.body.classList.add('resizing');
+        const move = (ev: PointerEvent): void => {
+          n = Math.min(max, Math.max(min, w + (ev.clientX - x0) * sign));
+          set(n);
+        };
+        const up = (): void => {
+          el.removeEventListener('pointermove', move);
+          el.removeEventListener('pointerup', up);
+          el.removeEventListener('pointercancel', up);
+          document.body.classList.remove('resizing');
+          save(n);
+        };
+        el.addEventListener('pointermove', move);
+        el.addEventListener('pointerup', up);
+        el.addEventListener('pointercancel', up);
+      }}
+    />
+  );
+}
+
 export function DesktopShell(): ReactElement {
+  const [treeW, setTreeW] = useState(() => savedWidth('tree'));
+  const [drawerW, setDrawerW] = useState(() => savedWidth('drawer'));
   const route = useRoute();
   const drawer = useUI((s) => s.drawer);
   const mTree = useUI((s) => s.mTree);
@@ -134,17 +216,22 @@ export function DesktopShell(): ReactElement {
   const nq = useNode(nodeId);
   const showDrawer = !pm && !!drawer && !!nq.data && route.name === 'node' && nq.data.id === nodeId;
   return (
-    <div className={'shell' + (showDrawer ? ' with-drawer' : '') + (pm ? ' page-mode' : '') + (mTree ? ' m-tree' : '')}>
-      <Top />
+    <div
+      className={'shell' + (showDrawer ? ' with-drawer' : '') + (pm ? ' page-mode' : '') + (mTree ? ' m-tree' : '')}
+      style={{ '--tree-w': treeW + 'px', '--drawer-w': drawerW + 'px' } as React.CSSProperties}
+    >
+      <Top route={route} />
       <Rail route={route} />
       <aside className="tree" aria-label="Folders">
         <TreePane />
+        <Resizer pane="tree" w={treeW} set={setTreeW} />
       </aside>
       <main className="main" id="main">
         <Main route={route} />
       </main>
       <aside className="drawer" aria-label="Details">
         {showDrawer && nodeId ? <DrawerContent id={nodeId} /> : null}
+        {showDrawer ? <Resizer pane="drawer" w={drawerW} set={setDrawerW} /> : null}
       </aside>
       <div
         className="scrim"

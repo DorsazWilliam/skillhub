@@ -87,8 +87,8 @@ textarea.input{height:auto;padding:8px 10px;resize:vertical;line-height:1.5}
 .sep{width:1px;height:18px;background:var(--border);margin:0 4px;flex:none}
 
 /* shell */
-.shell{display:grid;height:100%;grid-template-rows:52px minmax(0,1fr);grid-template-columns:56px 272px minmax(0,1fr) 0;grid-template-areas:"top top top top" "rail tree main drawer";transition:grid-template-columns .2s ease}
-.shell.with-drawer{grid-template-columns:56px 272px minmax(0,1fr) 352px}
+.shell{--tree-w:272px;--drawer-w:352px;display:grid;height:100%;grid-template-rows:52px minmax(0,1fr);grid-template-columns:56px var(--tree-w) minmax(0,1fr) 0;grid-template-areas:"top top top top" "rail tree main drawer";transition:grid-template-columns .2s ease}
+.shell.with-drawer{grid-template-columns:56px var(--tree-w) minmax(0,1fr) var(--drawer-w)}
 .shell.page-mode{grid-template-columns:56px 0 minmax(0,1fr) 0}
 .shell:not(.with-drawer) .drawer,.shell.page-mode .drawer,.shell.page-mode .tree{display:none}
 .top{grid-area:top;display:flex;align-items:center;gap:12px;padding:0 12px 0 14px;border-bottom:1px solid var(--border);background:var(--panel);min-width:0}
@@ -109,7 +109,7 @@ textarea.input{height:auto;padding:8px 10px;resize:vertical;line-height:1.5}
 .tree-head{display:flex;align-items:center;gap:2px;padding:12px 10px 6px 16px;flex:none}
 .tree-head .lbl{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);flex:1}
 .tree-body{flex:1;overflow:auto;padding:2px 8px 12px}
-.tree-foot{border-top:1px solid var(--border);padding:6px 8px;display:flex;gap:2px}
+.tree-foot{border-top:1px solid var(--border);padding:8px 8px 10px;display:flex;gap:2px}
 .row{--d:0;display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 calc(6px + var(--d)*16px);border-radius:7px;cursor:pointer;user-select:none;color:var(--fg-2);position:relative}
 .row:hover{background:var(--hover)}
 .row.sel{background:var(--accent-soft);color:var(--fg)}
@@ -501,8 +501,8 @@ table.t .num{font-variant-numeric:tabular-nums;color:var(--muted);white-space:no
 
 /* medium: the drawer floats over the page instead of squeezing it */
 @media (min-width:861px) and (max-width:1279px){
-  .shell.with-drawer{grid-template-columns:56px 272px minmax(0,1fr) 0}
-  .shell.with-drawer:not(.page-mode) .drawer{display:flex;position:fixed;right:0;top:52px;bottom:0;width:360px;z-index:50;box-shadow:var(--shadow-lg)}
+  .shell.with-drawer{grid-template-columns:56px var(--tree-w) minmax(0,1fr) 0}
+  .shell.with-drawer:not(.page-mode) .drawer{display:flex;position:fixed;right:0;top:52px;bottom:0;width:var(--drawer-w);z-index:50;box-shadow:var(--shadow-lg)}
 }
 /* phone */
 @media (max-width:860px){

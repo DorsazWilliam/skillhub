@@ -176,7 +176,6 @@ export function FolderPage({ id }: { id: string }): ReactElement {
           <LintBtn node={f} v={null} />
           <NewBtns f={f} />
           {r >= 4 ? <IB icon="user-plus" tip="Share" onClick={() => setUI({ modal: { type: 'share', id: f.id } })} /> : null}
-          <IB className="ib hide-m" icon="panel-right" tip="Details" onClick={() => setUI((s) => ({ drawer: s.drawer ? null : 'access' }))} />
           {r >= 4 && !ar ? <IB icon="more" tip="More" onClick={(e) => openMenu('more', e.currentTarget, f.id)} /> : null}
         </div>
       </div>

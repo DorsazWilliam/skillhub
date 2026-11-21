@@ -8,7 +8,7 @@ import { useMe, useChildren, useChain, useNode, useUsers, useTeams, role, qc, ty
 import { goNode, leaveEdit, openCommit, discardDraft, logout, startEdit } from '../actions';
 import { useResolvedNode } from '../shell/Main';
 import { useDocModel } from '../pages/docModel';
-import { SkillHead, Banner, DocBody, Pill, LintBtn } from '../pages/Doc';
+import { SkillHead, Banner, DocBody, VersionText, LintBtn } from '../pages/Doc';
 import { AreaChip, RulesMeter, useAreaCounts } from '../pages/Folder';
 import { DrawerContent } from '../shell/Drawer';
 import { GraphPage } from '../pages/Graph';
@@ -279,7 +279,7 @@ function DocScreen({ d, anim, onBack }: { d: NodeT; anim: string; onBack: () => 
       body={
         <>
           <div className="m-meta">
-            {r >= 2 ? <Pill node={d} /> : null}
+            {r >= 2 ? <VersionText node={d} /> : null}
             <LintBtn node={d} v={m.v} />
           </div>
           <div className="m-page">

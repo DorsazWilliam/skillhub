@@ -54,3 +54,62 @@ div.raw{padding:0;min-height:0;resize:none;overflow:hidden}
 
 /* the app never scrolls the document itself (focus must not shift the shell) */
 html{overflow:hidden}
+
+/* resizable folders and details panes */
+.tree,.drawer{position:relative}
+.resizer{position:absolute;top:0;bottom:0;width:9px;z-index:6;cursor:col-resize;touch-action:none}
+.resizer.tree{right:-5px}
+.resizer.drawer{left:-5px}
+.resizer::after{content:"";position:absolute;top:0;bottom:0;left:4px;width:1px;background:transparent;transition:background .12s}
+.resizer:hover::after,.resizer:focus-visible::after,body.resizing .resizer::after{background:var(--accent);width:2px;left:3.5px}
+.resizer:focus-visible{outline:none}
+body.resizing{cursor:col-resize;user-select:none}
+body.resizing .shell{transition:none}
+body.resizing iframe,body.resizing #gc{pointer-events:none}
+@media (max-width:860px){.resizer{display:none}}
+
+/* breadcrumbs: the full path when it fits; folded levels otherwise (measured in Crumbs.tsx); the current item never truncates */
+.crumbs{position:relative;flex-wrap:nowrap}
+.crumbs .cseg{display:inline-flex;align-items:center;gap:2px;flex:none}
+.crumbs .cseg button{padding:3px 6px;border-radius:6px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.crumbs .cseg button:hover{background:var(--hover);color:var(--fg)}
+.crumbs>.cur{flex:none;overflow:visible;text-overflow:clip}
+.crumbs .cfold{padding:3px 5px!important;color:var(--muted)}
+.crumbs .cmeasure{position:absolute;left:0;top:0;display:flex;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap}
+.crumbs .cmeasure .mcur{color:var(--fg);font-weight:500;padding:3px 6px;display:inline-flex;align-items:center;gap:6px}
+
+/* account menu theme switch */
+.theme-row{cursor:default;padding-top:4px;padding-bottom:4px}
+.theme-row:hover{background:none;color:var(--fg-2)}
+.theme-row .seg button{height:24px;min-width:28px;padding:0 6px}
+
+/* version status as quiet text */
+.vtext{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 8px;border-radius:8px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.vtext:hover{background:var(--hover);color:var(--fg)}
+.vtext .d{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+.vtext .d.warn{background:var(--warn-dot)}
+.vtext .d.off{background:var(--faint)}
+.vtext b{font-weight:500;color:var(--fg-2)}
+.vtext .vn2{color:var(--warn);font-variant-numeric:tabular-nums}
+
+/* skill: top-level tabs, a folder tab lists its files */
+.stabs{display:flex;gap:2px;padding:6px 8px 0;border-top:1px solid var(--border);background:var(--panel);overflow-x:auto;scrollbar-width:none}
+.stabs::-webkit-scrollbar{display:none}
+.stab{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 10px;border-bottom:2px solid transparent;color:var(--muted);font-size:13px;font-weight:500;white-space:nowrap;flex:none}
+.stab:hover{color:var(--fg)}
+.stab.on{color:var(--fg);border-bottom-color:var(--accent)}
+.stab .cnt{font-size:11px;background:var(--sunken);border-radius:999px;padding:0 6px;color:var(--muted);font-weight:500}
+.sback{flex:none;display:grid;place-items:center;width:22px;height:22px;align-self:center;margin:2px 2px 0 0;border-radius:6px;color:var(--faint)}
+.sback:hover{background:var(--hover);color:var(--fg)}
+.flist{border-top:1px solid var(--border);background:var(--panel);padding:4px 6px 6px}
+.frow{display:grid;grid-template-columns:auto minmax(0,auto) minmax(0,1fr);align-items:center;gap:10px;width:100%;height:32px;padding:0 8px;border-radius:8px;text-align:left;color:var(--fg-2)}
+.frow:hover{background:var(--hover)}
+.frow.on{background:var(--accent-soft);color:var(--fg)}
+.frow>.i{color:var(--faint)}
+.frow.sub>.i,.frow.sub .fn{color:var(--c-skills)}
+.frow .fn{font-family:var(--mono);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .fi{display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;font-size:12.5px;color:var(--faint);white-space:nowrap}
+@media (max-width:860px){
+  .m-app .skhead .stabs,.m-app .skhead .flist{background:var(--m-card);border-top-color:var(--m-sep)}
+  .frow{height:40px}
+}

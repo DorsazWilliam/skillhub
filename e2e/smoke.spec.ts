@@ -15,7 +15,7 @@ async function signIn(page: Page, as: 'owner' | 'publisher' | 'viewer'): Promise
 }
 
 async function details(page: Page, tab: string): Promise<void> {
-  if (!(await page.locator('.drawer .dtabs').isVisible())) await page.locator('.acts [aria-label="Details"]').click();
+  if (!(await page.locator('.drawer .dtabs').isVisible())) await page.locator('.top [aria-label="Details"]').click();
   await page.locator(`.dtabs [aria-label="${tab}"]`).click();
 }
 
@@ -61,12 +61,22 @@ test('opens a skill and its files', async ({ page }) => {
   await signIn(page, 'owner');
   await open(page, 'skills/deploy-service');
   await expect(page.locator('.skhead code').first()).toHaveText('deploy-service');
-  await expect(page.locator('.sfiles .sf')).toHaveCount(5);
-  await page.locator('.sfiles .sf', { hasText: 'scripts/smoke-test.sh' }).click();
+  // Top level only: SKILL.md, sub-skills, then one tab per folder.
+  await expect(page.locator('.stabs .stab')).toHaveText([/SKILL\.md/, /Sub-skills\s*2/, /scripts\s*1/, /templates\s*1/]);
+  await expect(page.locator('.stabs .sback')).toHaveCount(0);
+  await page.locator('.stabs .stab', { hasText: 'scripts' }).click();
+  await page.locator('.flist .frow', { hasText: 'smoke-test.sh' }).click();
   await expect(page.locator('.code .code-h')).toContainText('smoke-test.sh');
   await expect(page.locator('.code pre')).toContainText('smoke test passed');
-  await page.locator('.sfiles .sf', { hasText: 'templates/release-notes' }).click();
+  await expect(page.locator('.stabs .stab.on')).toContainText('scripts');
+  await page.locator('.stabs .stab', { hasText: 'templates' }).click();
+  await page.locator('.flist .frow', { hasText: 'release-notes' }).click();
   await expect(page.locator('.md h1')).toHaveText('Release notes');
+  // A sub-skill has a back control to its parent.
+  await page.locator('.stabs .stab', { hasText: 'Sub-skills' }).click();
+  await page.locator('.flist .frow', { hasText: 'rollback' }).click();
+  await page.locator('.stabs .sback').click();
+  await expect(page.locator('.skhead code').first()).toHaveText('deploy-service');
 });
 
 test('edits a draft with autosave, commits and publishes', async ({ page }) => {
@@ -89,7 +99,7 @@ test('edits a draft with autosave, commits and publishes', async ({ page }) => {
   await page.locator('.modal .btn.primary', { hasText: 'Commit' }).click();
   await expect(page.locator('.toast', { hasText: 'Published v2' })).toBeVisible();
   await expect(page.locator('.md')).toContainText('Bring a laptop charger on day one.');
-  await expect(page.locator('.pill-btn .pp.ok')).toContainText('v2');
+  await expect(page.locator('.acts .vtext')).toContainText('Published v2');
 });
 
 test('publishes a whole skill with publish_skill', async ({ page }) => {
@@ -112,7 +122,7 @@ test('shows history and rolls back', async ({ page }) => {
   await expect(page.locator('.modal h2')).toContainText('Publish');
   await page.locator('.modal .btn.primary', { hasText: 'Roll back to v1' }).click();
   await expect(page.locator('.toast', { hasText: 'Rolled back to v1' })).toBeVisible();
-  await expect(page.locator('.pill-btn .pp.ok')).toContainText('v1');
+  await expect(page.locator('.acts .vtext')).toContainText('Published v1');
 });
 
 test('shows links and backlinks', async ({ page }) => {
@@ -181,7 +191,7 @@ test('a viewer cannot see drafts or unpublished documents', async ({ page }) => 
   await expect(page.locator('.empty', { hasText: 'Not found or no access' })).toBeVisible();
   await open(page, 'skills/sql-review');
   await expect(page.locator('.banner')).toHaveCount(0);
-  await expect(page.locator('.pill-btn')).toHaveCount(0);
+  await expect(page.locator('.vtext')).toHaveCount(0);
   const r = await page.evaluate(async () => (await fetch('/api/v1/docs/skills%2Fsql-review/draft')).status);
   expect([403, 404]).toContain(r);
   await page.goto('/n/documentation/data');

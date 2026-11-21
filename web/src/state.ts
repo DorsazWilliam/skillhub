@@ -109,7 +109,7 @@ export function setUI(patch: Partial<UIState> | ((s: UIState) => Partial<UIState
   const p = typeof patch === 'function' ? patch(state) : patch;
   state = { ...state, ...p };
   if (p.theme !== undefined) {
-    if (p.theme) store.set('sh-theme', p.theme);
+    store.set('sh-theme', p.theme ?? '');
     applyTheme();
   }
   if (p.recent) store.set('sh-recent', JSON.stringify(p.recent));
