@@ -394,6 +394,29 @@ ON CONFLICT(tid, oid) DO UPDATE SET email = excluded.email, name = excluded.name
   for (const u of USERS) sql += `UPDATE users SET last_login_at = ${u.last}, status = ${q(u.status)} WHERE id = ${q(UID[u.k])};\n`;
   sql += `DELETE FROM sessions WHERE id_hash IN (${[...sessions.values()].map((t) => q(sha(t))).join(',')});\n`;
 
+  // Agent usage over the last 30 days (usage_daily), deterministic: popular skills, a few docs, one skill agents find but never load.
+  {
+    let seed = 20261122;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    const perDay = { s_cr: [9, 14], s_ir: [6, 9], s_dep: [4, 7], s_sql: [2, 4], s_disc: [1, 3], s_rot: [0, 6], x_arch: [3, 2], x_oc: [2, 2], x_env: [2, 2], x_sec: [1, 1], x_wh: [1, 1] };
+    const agents = USERS.filter((u) => u.status !== 'suspended').map((u) => UID[u.k]);
+    const rows = [];
+    for (let d = 29; d >= 0; d--) {
+      const day = new Date(T0 - d * DAY).toISOString().slice(0, 10);
+      const weekend = [0, 6].includes(new Date(T0 - d * DAY).getUTCDay());
+      for (const [k, [loads, shown]] of Object.entries(perDay)) {
+        if (!ID[k]) continue;
+        for (const who of agents) {
+          const l = Math.round((loads / agents.length) * (weekend ? 0.3 : 1) * (0.4 + rnd() * 1.4));
+          const sh = Math.round((shown / agents.length) * (weekend ? 0.3 : 1) * (0.4 + rnd() * 1.4));
+          if (!l && !sh) continue;
+          rows.push(`(${q(day)},${q(ID[k])},${q(who)},${l},${sh},${l ? T0 - d * DAY - Math.floor(rnd() * 8) * HR : 'NULL'})`);
+        }
+      }
+    }
+    for (let i = 0; i < rows.length; i += 200) sql += `INSERT OR REPLACE INTO usage_daily (day, node_id, actor_id, loads, shown, last_load_at) VALUES ${rows.slice(i, i + 200).join(',\n')};\n`;
+  }
+
   // tokens
   sql += `INSERT INTO api_tokens (id, user_id, name, token_hash, scopes, expires_at, last_used_at, revoked_at, created_at) VALUES
  ('seedtok-ci-sync', ${q(UID.u1)}, 'ci-sync', ${q(sha(randomBytes(32).toString('hex')))}, 'read,write', ${T0 + 50 * DAY}, ${T0 - 2 * HR}, NULL, ${T0 - 40 * DAY}),
