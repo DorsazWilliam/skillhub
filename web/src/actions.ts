@@ -266,6 +266,41 @@ export async function unpublish(id: string): Promise<void> {
   }
 }
 
+export async function newPrototype(parent: string): Promise<void> {
+  try {
+    const name = await uniqueName(parent, 'new-prototype');
+    const res = await api.create_prototype({ parent, name });
+    invalidateContent();
+    openMany([parent, res.folder.id]);
+    await goNode(res.folder.id);
+  } catch (e) {
+    errorToast(e);
+  }
+}
+
+export async function publishPrototype(id: string): Promise<void> {
+  try {
+    const res = await api.publish_prototype({ prototype: id });
+    setUI({ modal: null });
+    invalidateContent();
+    const done = res.files.filter((f) => f.status === 'published');
+    if (!done.length) {
+      toast('Up to date', { icon: 'check' });
+      return;
+    }
+    const p = await fetchNode(id).catch(() => null);
+    toast('Published ' + (p?.name ?? 'prototype'), {
+      icon: 'rocket',
+      sub: done.length + (done.length === 1 ? ' file' : ' files'),
+      undo: async () => {
+        for (const f of done) await undoPublish(f.id, f.from);
+      },
+    });
+  } catch (e) {
+    errorToast(e);
+  }
+}
+
 export async function publishSkill(skillId: string): Promise<void> {
   try {
     const res = await api.publish_skill({ skill: skillId });

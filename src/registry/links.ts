@@ -126,9 +126,9 @@ export const getLinks = defineOp({
 });
 
 const GraphNode = z.object({
-  id: z.string().describe('A skill folder, or a document outside skills. Files inside a skill collapse into the skill.'),
-  open_id: z.string().describe('The document to open: SKILL.md for a skill'),
-  kind: z.enum(['skill', 'doc']),
+  id: z.string().describe('A skill folder, a prototype folder, or a document outside them. Files inside a skill or prototype collapse into it.'),
+  open_id: z.string().describe('The node to open: SKILL.md for a skill, the folder for a prototype'),
+  kind: z.enum(['skill', 'doc', 'prototype']),
   label: z.string(),
   area: AreaEnum,
   canonical_path: z.string().nullable(),
@@ -163,7 +163,13 @@ export const getGraph = defineOp({
       for (let i = folders.length - 1; i >= 0; i--) if (tree.skillFolders.has(folders[i]!)) return tree.byId.get(folders[i]!) ?? null;
       return null;
     };
-    const keyOf = (n: NodeRow): NodeRow => (n.kind === 'folder' ? n : (skillOf(n) ?? n));
+    const protoOf = (n: NodeRow): NodeRow | null => {
+      const chain = chainIds(n.path);
+      const folders = n.kind === 'doc' ? chain.slice(0, -1) : chain;
+      for (let i = folders.length - 1; i >= 0; i--) if (tree.protoFolders.has(folders[i]!)) return tree.byId.get(folders[i]!) ?? null;
+      return null;
+    };
+    const keyOf = (n: NodeRow): NodeRow => (n.kind === 'folder' ? n : (skillOf(n) ?? protoOf(n) ?? n));
     const inArea = (n: NodeRow): boolean => !input.area || areaOfPath(n.path) === (input.area as Area);
 
     const nodes = new Map<string, NodeRow>();
@@ -194,12 +200,17 @@ export const getGraph = defineOp({
         if (r.kind !== want) continue;
         const t = (await resolvePath(tree, r.to_path)) as NodeRow | null;
         if (!readable(t)) continue;
-        if (t.kind === 'folder' && !tree.skillFolders.has(t.id)) continue;
+        if (t.kind === 'folder' && !tree.skillFolders.has(t.id) && !tree.protoFolders.has(t.id)) continue;
         const tn = add(t);
         if (!tn || tn.id === s.id) continue;
         const key = s.id + '>' + tn.id;
         if (!edges.has(key)) edges.set(key, { from: s.id, to: tn.id, status: linkAllowed(srcPlaced, place(t, new Set())) ? 'ok' : 'wrong_direction', contains: false });
       }
+    }
+    // Every readable prototype is a node, even with no markdown inside it (its html, css and js files have no links).
+    for (const id of tree.protoFolders) {
+      const n = tree.byId.get(id);
+      if (n) add(n);
     }
     // A skill and its sub-skills.
     for (const n of [...nodes.values()]) {
@@ -227,11 +238,11 @@ export const getGraph = defineOp({
         return {
           id: n.id,
           open_id: md?.id ?? n.id,
-          kind: n.kind === 'folder' ? ('skill' as const) : ('doc' as const),
+          kind: n.kind === 'doc' ? ('doc' as const) : tree.protoFolders.has(n.id) ? ('prototype' as const) : ('skill' as const),
           label: n.name,
           area: areaOfPath(n.path) ?? 'documentation',
           canonical_path: canonicalOf(info, n, roles.get(n.id) ?? 0),
-          published: (md ?? n).published_version !== null,
+          published: tree.protoFolders.has(n.id) ? (tree.kids.get(n.id) ?? []).some((k) => k.name.toLowerCase() === 'index.html' && k.published_version !== null) : (md ?? n).published_version !== null,
         };
       }),
       edges: [...edges.values()],

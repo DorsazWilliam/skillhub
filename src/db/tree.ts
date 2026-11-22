@@ -1,4 +1,4 @@
-import { AREA_IDS, SKILL_MD } from '../lib/areas';
+import { AREA_IDS, PROTO_INDEX, SKILL_MD } from '../lib/areas';
 import { chainOf, type TNode, type TreeSource } from '../lib/links';
 import { all, one, qs, type NodeRow } from './d1';
 
@@ -17,6 +17,7 @@ function childNames(seg: string): string[] {
 export class DbTree implements TreeSource {
   private nodes = new Map<string, NodeRow | null>();
   private skills = new Map<string, boolean>();
+  private protos = new Map<string, boolean>();
   private children = new Map<string, NodeRow | null>();
   private found = new Map<string, NodeRow | null>();
 
@@ -95,6 +96,35 @@ export class DbTree implements TreeSource {
     return new Set(folderIds.filter((id) => this.skills.get(id)));
   }
 
+  /** Which of these folder ids are prototypes (under prototypes/, with a live index.html). */
+  async protoSet(folderIds: string[]): Promise<Set<string>> {
+    const missing = [...new Set(folderIds)].filter((id) => !this.protos.has(id));
+    const prefix = `/${AREA_IDS.prototypes}/`;
+    for (let i = 0; i < missing.length; i += CHUNK) {
+      const part = missing.slice(i, i + CHUNK);
+      const rows = await all<{ parent_id: string }>(
+        this.db,
+        `SELECT parent_id FROM nodes WHERE parent_id IN (${qs(part.length)}) AND lower(name) = ? AND kind = 'doc' AND deleted_at IS NULL AND substr(path, 1, ?) = ?`,
+        ...part,
+        PROTO_INDEX,
+        prefix.length,
+        prefix,
+      );
+      const hit = new Set(rows.map((r) => r.parent_id));
+      for (const id of part) this.protos.set(id, hit.has(id));
+    }
+    return new Set(folderIds.filter((id) => this.protos.get(id)));
+  }
+
+  /** The nearest prototype folder containing this node (a prototype folder contains itself), or null. */
+  async protoOf(node: TNode): Promise<NodeRow | null> {
+    const chain = chainOf(node.path);
+    const folders = node.kind === 'doc' ? chain.slice(0, -1) : chain;
+    const set = await this.protoSet(folders);
+    for (let i = folders.length - 1; i >= 0; i--) if (set.has(folders[i]!)) return this.get(folders[i]!);
+    return null;
+  }
+
   /** SKILL.md of a skill folder, or null. */
   async skillMd(folderId: string): Promise<NodeRow | null> {
     return one<NodeRow>(this.db, "SELECT * FROM nodes WHERE parent_id = ? AND name = ? AND kind = 'doc' AND deleted_at IS NULL", folderId, SKILL_MD);
@@ -113,6 +143,7 @@ export class MemTree implements TreeSource {
   readonly byId = new Map<string, NodeRow>();
   readonly kids = new Map<string, NodeRow[]>();
   readonly skillFolders = new Set<string>();
+  readonly protoFolders = new Set<string>();
   private skillByName = new Map<string, NodeRow>();
 
   constructor(rows: NodeRow[]) {
@@ -124,6 +155,7 @@ export class MemTree implements TreeSource {
         this.kids.set(r.parent_id, list);
       }
       if (r.kind === 'doc' && r.name === SKILL_MD && r.parent_id) this.skillFolders.add(r.parent_id);
+      if (r.kind === 'doc' && r.name.toLowerCase() === PROTO_INDEX && r.parent_id && r.path.startsWith(`/${AREA_IDS.prototypes}/`)) this.protoFolders.add(r.parent_id);
     }
     const skillsPrefix = `/${AREA_IDS.skills}/`;
     const candidates = [...this.skillFolders]

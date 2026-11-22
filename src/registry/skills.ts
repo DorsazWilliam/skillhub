@@ -7,9 +7,9 @@ import { AREA_IDS } from '../lib/areas';
 import { splitFrontmatter } from '../lib/frontmatter';
 import { RULES_CAP } from '../lib/lint';
 import { invalid } from '../lib/errors';
-import { defineOp } from './types';
+import { defineOp, type OpContext } from './types';
 import { NodeRef } from './shared';
-import { WarningOut, activeWarnings, skillMembers } from './content';
+import { WarningOut, activeWarnings, skillMembers, type SkillMember } from './content';
 import { publishStmts } from './docs';
 
 const bytes = (s: string): number => new TextEncoder().encode(s).length;
@@ -40,7 +40,25 @@ export const publishSkill = defineOp({
     const folder = ctx.node!;
     const tree = new DbTree(ctx.db);
     if (!(await tree.skillMd(folder.id))) throw invalid('This folder is not a skill (it has no SKILL.md)');
-    const members = (await skillMembers(ctx.db, folder)).filter((m) => !m.sub && m.node.kind === 'doc');
+    const r = await publishMembers(ctx, tree, folder, await skillMembers(ctx.db, folder));
+    return { skill: folder.id, published: r.published, files: r.files };
+  },
+});
+
+export const PublishFileResult = FileResult;
+
+/**
+ * Publishes the latest committed version of every changed member the caller can publish, in one batch
+ * (all or none). Sub-entries (nested skills or prototypes) are skipped. Shared by publish_skill and publish_prototype.
+ */
+export async function publishMembers(
+  ctx: OpContext,
+  tree: DbTree,
+  folder: NodeRow,
+  all_: SkillMember[],
+): Promise<{ published: number; files: z.infer<typeof FileResult>[] }> {
+  {
+    const members = all_.filter((m) => !m.sub && m.node.kind === 'doc');
     const via = [...new Set(members.flatMap((m) => m.via))];
     const viaRows = [...(await tree.getMany(via)).values()];
     const roles = await ctx.az.roles([...members.map((m) => m.node), ...viaRows]);
@@ -86,9 +104,9 @@ export const publishSkill = defineOp({
       t.row.warnings = await activeWarnings(ctx.az, tree, { ...t.node, published_version: t.node.head_version }, contents.get(t.node.id)!);
     }
     ctx.audit.detail = { files: todo.map((t) => ({ id: t.node.id, from: t.row.from, to: t.row.to })) };
-    return { skill: folder.id, published: todo.length, files: results };
-  },
-});
+    return { published: todo.length, files: results };
+  }
+}
 
 // ---------- rules ----------
 

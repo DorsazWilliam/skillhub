@@ -6,6 +6,8 @@ export interface Env {
   OAUTH_KV: KVNamespace;
   ASSETS?: Fetcher;
   RATE_LIMITER?: RateLimit;
+  /** Browser Run binding, used by render_prototype. Optional: without it, rendering answers that it is not configured. */
+  BROWSER?: Fetcher;
   OAUTH_PROVIDER: OAuthHelpers;
 
   BASE_URL: string;

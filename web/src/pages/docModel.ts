@@ -64,7 +64,7 @@ export function skillMeta(head: Skill | undefined): { name: string | null; descr
 }
 
 /** Files of the skill that have a newer committed version than the published one (prototype pendingFiles). */
-export function pendingFiles(head: Skill | undefined): NonNullable<Skill['files']> {
+export function pendingFiles(head: Pick<Skill, 'files'> | undefined): NonNullable<Skill['files']> {
   return (head?.files ?? []).filter((f) => f.kind !== 'skill' && (f.head_version ?? 0) > (f.published_version ?? 0));
 }
 

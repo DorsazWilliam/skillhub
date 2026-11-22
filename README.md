@@ -10,15 +10,16 @@ One shot project to let a small org store, version and share AI configuration fi
 
 Agents get better when they share what a team already knows: how we review code, how we run incidents, what never to do in production. Today that lives in scattered `CLAUDE.md` files, pasted prompts and wiki pages nobody versions. SkillHub keeps it in one place, with the same discipline as code (drafts, versions, publish, rollback, audit) and the same access model as a shared drive. Every agent your people use connects to it over MCP and gets exactly what that person may read.
 
-The library has three areas, each with its own nature:
+The library has four areas, each with its own nature:
 
 | Area | What it is | How agents get it |
 | --- | --- | --- |
 | `rules/` | Short files, always on | Sent as the MCP instructions on connect, capped at 8 KB |
 | `skills/` | One folder per skill: `SKILL.md`, templates, scripts, sub-skills | Found and loaded when relevant |
 | `documentation/` | Free-form reference pages | Followed through links |
+| `prototypes/` | One folder per prototype: `index.html` plus its CSS, JS and notes | Opened through a signed preview link, or screenshotted |
 
-They connect through canonical `[[area/path]]` links: rules point to skills and docs, skills to docs, docs to each other. That makes the whole library a graph.
+They connect through canonical `[[area/path]]` links: rules point to skills and docs, skills to docs and prototypes, docs to each other and to prototypes. That makes the whole library a graph.
 
 <table>
   <tr>
@@ -34,6 +35,7 @@ They connect through canonical `[[area/path]]` links: rules point to skills and 
 - **Access control.** Viewer, Editor, Publisher and Manager on folders, inherited down the tree, with boundaries that stop inheritance. Teams. Sign-in with Microsoft Entra ID.
 - **One MCP endpoint.** Claude, ChatGPT and Copilot connect with OAuth, a consent page and scope checkboxes. Tools are filtered by scope and role.
 - **Links, backlinks and a graph.** A link to something you cannot read shows as locked and is never named.
+- **Prototypes.** Clickable HTML mockups, versioned and published like everything else, shown live in the app at desktop, tablet and phone width. Agents get a signed preview link to open in their own browser, or a screenshot with console errors (`render_prototype`) when they have none. Prototype scripts run sandboxed, never with the viewer's session.
 - **Authoring warnings.** Small, dismissable hints when a skill or rule breaks the usual guidelines (vague names, descriptions that do not say when to use them, long rules, broken links). They come back from the MCP write tools too, so agents fix their own drafts.
 - **Audit.** Every call, including which agent read which skill version. Seven days in the database, then archived to R2.
 - **Usage.** Which skills and docs agents actually load, by whom, and what they never find: loads, times shown in search results, a daily chart and notes like *Never found* or *No links in*. Owners only, informative only, 90 days. The graph can size nodes by use.
@@ -89,7 +91,7 @@ Setup prints two URLs: the Entra redirect URI to paste into the app registration
 
 ## Pricing
 
-Needs the Workers Paid plan at $5 per month. The free plan's 10 ms CPU limit and daily D1 caps are not suitable. Paid includes 25 billion D1 rows read and 50 million rows written per month and 10 GB of R2. A deployment of a few hundred users stays inside the base price.
+Needs the Workers Paid plan at $5 per month. The free plan's 10 ms CPU limit and daily D1 caps are not suitable. Paid includes 25 billion D1 rows read and 50 million rows written per month, 10 GB of R2 and 10 browser hours for prototype screenshots. A deployment of a few hundred users stays inside the base price.
 
 ## Configuration
 
@@ -176,7 +178,7 @@ docs           ENTRA, DEPLOY, CLIENTS, SECURITY, WHITELABEL, DECISIONS
 
 ## Status
 
-Backend complete for SPEC milestones M0 to M6. The React SPA reproduces the approved prototype (`prototype/index.html`) on desktop and phone. 129 unit and integration tests (`npx vitest run`) and a 13-test Playwright smoke suite (`npm run e2e`).
+Backend complete for SPEC milestones M0 to M6. The React SPA reproduces the approved prototype (`prototype/index.html`) on desktop and phone. 139 unit and integration tests (`npx vitest run`) and a 14-test Playwright smoke suite (`npm run e2e`).
 
 ## License
 

@@ -351,6 +351,25 @@ ON CONFLICT(tid, oid) DO UPDATE SET email = excluded.email, name = excluded.name
     timing.push({ id, versions, draftTs, created: T0 - ago * DAY, pub });
   }
 
+  // A prototype: a checkout flow (index.html, styles.css, app.js) with a note that links to the docs, published.
+  {
+    const dir = new URL('./seed-assets/checkout-flow/', import.meta.url);
+    const html = readFileSync(new URL('index.html', dir), 'utf8');
+    const proto = await api('u1', 'POST', '/prototypes', { parent: '00000000000000000000000AP1', name: 'checkout-flow', html });
+    const folder = proto.folder.id;
+    for (const [name, file] of [['styles.css', 'styles.css'], ['app.js', 'app.js']]) {
+      await api('u1', 'POST', '/docs', { parent: folder, name, content: readFileSync(new URL(file, dir), 'utf8') });
+    }
+    await api('u1', 'POST', '/docs', {
+      parent: folder,
+      name: 'notes',
+      content: '# Checkout flow\n\nThree steps: cart, shipping, payment. Totals update live. Follows [[documentation/engineering/architecture]] for the order service.\n',
+    });
+    const kids = await api('u1', 'GET', `/children?folder=${folder}`);
+    for (const k of kids.items) await api('u1', 'POST', `/docs/${k.id}/versions`, { message: 'First version' });
+    await api('u1', 'POST', `/prototypes/${folder}/publish`);
+  }
+
   // backdate
   sql = '';
   const folderIds = S.filter((s) => s[0] !== 'doc').map((s) => ID[s[1]]);

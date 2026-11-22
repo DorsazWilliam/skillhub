@@ -160,7 +160,7 @@ export class Authz {
       case 'node': {
         const node = target?.node;
         if (node === null || node === undefined) {
-          // The top level holds only the three fixed areas; nobody changes it.
+          // The top level holds only the fixed areas; nobody changes it.
           throw new AppError('forbidden', 'The top level holds only the rules, skills and documentation areas');
         }
         const role = nodeRole ?? (await this.role(node));

@@ -14,7 +14,7 @@ export const NodeRef = z
   .min(1)
   .max(2000)
   .describe('Node id, a display path like /documentation/engineering/architecture, or a canonical link path like skills/code-review');
-export const AreaEnum = z.enum(['rules', 'skills', 'documentation']);
+export const AreaEnum = z.enum(['rules', 'skills', 'documentation', 'prototypes']);
 export const RoleEnum = z.enum(['viewer', 'editor', 'publisher', 'manager']);
 export const AccessEnum = z.enum(['none', 'viewer', 'editor', 'publisher', 'manager']);
 export const Cursor = z.string().max(200).optional().describe('Opaque cursor from a previous page');
@@ -28,13 +28,14 @@ export const NodeOut = z.object({
   parent_id: z.string().nullable().describe('null when the parent is the top level or not readable'),
   access: AccessEnum,
   area: AreaEnum.nullable().describe('The top-level area the node lives in'),
-  is_area: z.boolean().describe('true for the three fixed area folders, which cannot be renamed, moved or deleted'),
+  is_area: z.boolean().describe('true for the fixed area folders, which cannot be renamed, moved or deleted'),
   canonical_path: z
     .string()
     .nullable()
     .describe('Path to use in [[links]], e.g. skills/code-review or documentation/engineering/architecture. null when it would name a folder you cannot read.'),
   inherit: z.boolean().optional(),
   is_skill: z.boolean().optional().describe('Folders: contains a SKILL.md. Documents: a published SKILL.md with a valid name and description'),
+  is_prototype: z.boolean().optional().describe('Folders under prototypes/ that contain an index.html'),
   format: z.string().optional().describe('Documents: "markdown", or the extension of a text file (sh, py, sql, ...)'),
   published_version: z.number().nullable().optional(),
   head_version: z.number().nullable().optional().describe('Editors and above only'),
@@ -65,7 +66,7 @@ const topOrder = (a: NodeRow, b: NodeRow): number =>
 
 /**
  * The highest readable folders for the actor ("Shared with me", Google Drive style).
- * Owners see the real top level (the three areas). Nothing unreadable is returned.
+ * Owners see the real top level (the areas). Nothing unreadable is returned.
  */
 export async function sharedTops(az: Authz): Promise<NodeRow[]> {
   if (az.isOwner) {
@@ -124,6 +125,7 @@ export interface ChainInfo {
   byId: Map<string, NodeRow>;
   roles: Map<string, number>;
   skills: Set<string>;
+  protos: Set<string>;
 }
 
 export async function chainInfo(az: Authz, nodes: NodeRow[]): Promise<ChainInfo> {
@@ -134,8 +136,10 @@ export async function chainInfo(az: Authz, nodes: NodeRow[]): Promise<ChainInfo>
   for (const n of nodes) byId.set(n.id, n);
   const folders = chainNodes.filter((n) => n.kind === 'folder');
   const roles = await az.roles(folders);
-  const skills = await new DbTree(az.db).skillSet(folders.map((f) => f.id));
-  return { byId, roles, skills };
+  const tree = new DbTree(az.db);
+  const skills = await tree.skillSet(folders.map((f) => f.id));
+  const protos = await tree.protoSet(folders.map((f) => f.id));
+  return { byId, roles, skills, protos };
 }
 
 /** Canonical link path, or null when it would name a folder the caller cannot read (area names are public). */
@@ -210,6 +214,7 @@ export async function nodeOuts(az: Authz, nodes: NodeRow[], roles?: Map<string, 
     if (n.kind === 'folder') {
       base.inherit = n.inherit === 1;
       base.is_skill = info.skills.has(n.id);
+      base.is_prototype = info.protos.has(n.id);
     } else {
       base.is_skill = n.is_skill === 1;
       base.format = n.format ?? 'markdown';

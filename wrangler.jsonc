@@ -23,6 +23,8 @@
       "/mcp",
       "/mcp/*",
       "/a/*",
+      "/p/*",
+      "/r/*",
       "/.well-known/*",
       "/healthz"
     ]
@@ -32,6 +34,9 @@
   "d1_databases": [{ "binding": "DB", "database_name": "skillhub", "migrations_dir": "migrations" }],
   "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "skillhub-assets" }],
   "kv_namespaces": [{ "binding": "OAUTH_KV" }],
+
+  // Browser Run, for render_prototype (screenshots for agents without a browser). Billed by browser time; see docs/DEPLOY.md.
+  "browser": { "binding": "BROWSER" },
 
   "ratelimits": [{ "name": "RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 300, "period": 60 } }],
 

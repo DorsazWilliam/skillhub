@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { api, uiOnly } from '../api/client';
-import { useNode, useVersions, useWarnings, useUsers, useTeams, useMe, useSkill, fetchChildren, invalidate, invalidateContent, role, qc, type NodeT, type Item } from '../api/hooks';
+import { useNode, useVersions, useWarnings, useUsers, useTeams, useMe, useSkill, usePrototype, fetchChildren, invalidate, invalidateContent, role, qc, type NodeT, type Item } from '../api/hooks';
 import { Ic } from '../lib/icons';
 import { ROLES, RICON, ROLE_N, ROLE_KEY, SCOPES, areaKey } from '../lib/util';
 import { Av, IB, Empty, nodeIcon } from './common';
 import { Confirm, toast, errorToast, copyText } from './feedback';
 import { setUI, useUI, getUI, toggleTheme, type Modal } from '../state';
-import { doCommit, publishVersion, unpublish, publishSkill, moveNode, renameNode, exportTree, goNode, openCommit, editorCtl, isMobile } from '../actions';
+import { doCommit, publishVersion, unpublish, publishSkill, publishPrototype, moveNode, renameNode, exportTree, goNode, openCommit, editorCtl, isMobile } from '../actions';
 import { navigate } from '../router';
 import { DiffTable, Stat, parsePatch, addAll, type Op } from './diff';
 import { pendingFiles } from '../pages/docModel';
@@ -307,8 +307,11 @@ function DiffModal({ m }: { m: Extract<Modal, { type: 'diff' }> }): ReactElement
 
 function SkillPublishModal({ m }: { m: Extract<Modal, { type: 'skill-publish' }> }): ReactElement {
   const folder = useNode(m.id).data;
-  const head = useSkill(m.id, null);
-  const files = pendingFiles(head.data);
+  // The same dialog publishes a skill or a prototype: both list their files with versions.
+  const skill = useSkill(m.proto ? null : m.id, null);
+  const proto = usePrototype(m.proto ? m.id : null);
+  const head = m.proto ? proto : skill;
+  const files = pendingFiles(m.proto ? (proto.data ? { files: proto.data.files } : undefined) : skill.data);
   const diffs = useQueries({
     queries: files.map((f) => ({
       queryKey: ['diff', f.id, f.published_version ?? 0, 'head'],
@@ -328,11 +331,11 @@ function SkillPublishModal({ m }: { m: Extract<Modal, { type: 'skill-publish' }>
   const openIdx = Math.max(0, files.findIndex((f) => f.id === m.open));
   const od = diffs[openIdx]?.data;
   return (
-    <Wrap size="lg" label="Publish skill" detent>
+    <Wrap size="lg" label={m.proto ? 'Publish prototype' : 'Publish skill'} detent>
       <div className="mh">
         <h2>
-          <span className="ac-skills">
-            <Ic n="sparkles" s={17} />
+          <span className={m.proto ? 'ac-protos' : 'ac-skills'}>
+            <Ic n={m.proto ? 'app-window' : 'sparkles'} s={17} />
           </span>
           <span className="ell">{folder?.name ?? ''}</span>
         </h2>
@@ -380,7 +383,7 @@ function SkillPublishModal({ m }: { m: Extract<Modal, { type: 'skill-publish' }>
         <button className="btn" onClick={closeModal}>
           Cancel
         </button>
-        <button className="btn primary" disabled={!files.length} onClick={() => void publishSkill(m.id)}>
+        <button className="btn primary" disabled={!files.length} onClick={() => void (m.proto ? publishPrototype(m.id) : publishSkill(m.id))}>
           <Ic n="rocket" s={15} />
           <span>
             Publish {files.length} {files.length === 1 ? 'file' : 'files'}

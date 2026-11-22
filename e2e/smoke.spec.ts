@@ -37,14 +37,15 @@ test('signs in as each role', async ({ page }) => {
   await expect(page.locator('.acts [aria-label="Edit"]')).toHaveCount(0);
 });
 
-test('browses the three areas', async ({ page }) => {
+test('browses the four areas', async ({ page }) => {
   await signIn(page, 'owner');
   await page.goto('/');
-  await expect(page.locator('.tile')).toHaveCount(3);
+  await expect(page.locator('.tile')).toHaveCount(4);
   for (const [name, item] of [
     ['rules', 'security'],
     ['skills', 'engineering'],
     ['documentation', 'handbook'],
+    ['prototypes', 'checkout-flow'],
   ]) {
     await page.goto('/');
     await page.locator('.tile', { hasText: name }).click();
@@ -172,6 +173,24 @@ test('shows warnings and dismisses and restores them', async ({ page }) => {
   // The menu stays open while warnings remain, with the restore control below them.
   await page.locator('.menu .mi[data-tip="Restore dismissed"]').click();
   await expect(btn).toHaveText('2');
+});
+
+test('opens a prototype: live preview, viewports, files', async ({ page }) => {
+  await signIn(page, 'owner');
+  await page.goto('/');
+  await expect(page.locator('.tile')).toHaveCount(4);
+  await page.goto('/n/prototypes/checkout-flow');
+  await expect(page.locator('.stabs .stab')).toHaveText([/Preview/, /index\.html/, /app\.js/, /notes/, /styles\.css/]);
+  const frame = page.frameLocator('iframe.pv-frame');
+  await expect(frame.locator('[data-panel="1"] h1')).toHaveText('Your cart');
+  // The prototype's own script runs: Continue moves to the next step.
+  await frame.locator('#next').click();
+  await expect(frame.locator('[data-panel="2"] h1')).toHaveText('Shipping');
+  await page.locator('.pv-bar [aria-label="Phone"]').click();
+  await expect(page.locator('.pv-stage.phone iframe')).toBeVisible();
+  await page.locator('.stabs .stab', { hasText: 'app.js' }).click();
+  await expect(page.locator('.code .code-h')).toContainText('app.js');
+  await expect(page.locator('.stabs .stab.on')).toContainText('app.js');
 });
 
 test('shares a folder', async ({ page }) => {

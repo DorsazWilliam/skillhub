@@ -19,7 +19,7 @@ interface GN {
   open: string;
   label: string;
   area: AreaKey;
-  kind: 'skill' | 'doc';
+  kind: 'skill' | 'doc' | 'prototype';
   deg: number;
   x: number;
   y: number;
@@ -33,7 +33,7 @@ interface GE {
   contains: boolean;
 }
 
-const ANCH: Record<AreaKey, [number, number]> = { rules: [-300, -110], skills: [0, 120], docs: [300, -60] };
+const ANCH: Record<AreaKey, [number, number]> = { rules: [-300, -110], skills: [0, 120], docs: [300, -60], protos: [40, -260] };
 
 /** Module state so positions, zoom and filters survive navigation, like the prototype's G. */
 const G = {
@@ -43,7 +43,7 @@ const G = {
   py: 0,
   hover: null as GN | null,
   focus: null as GN | null,
-  f: { rules: true, skills: true, docs: true } as Record<AreaKey, boolean>,
+  f: { rules: true, skills: true, docs: true, protos: true } as Record<AreaKey, boolean>,
   q: '',
   alpha: 0,
   raf: 0,
@@ -239,7 +239,7 @@ function draw(): void {
   if (!x) return;
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string): string => cs.getPropertyValue(n).trim();
-  const col: Record<AreaKey, string> = { rules: v('--c-rules'), skills: v('--c-skills'), docs: v('--c-docs') };
+  const col: Record<AreaKey, string> = { rules: v('--c-rules'), skills: v('--c-skills'), docs: v('--c-docs'), protos: v('--c-protos') };
   const fg = v('--fg');
   const muted = v('--muted');
   const warn = v('--warn-dot');
@@ -319,6 +319,11 @@ function draw(): void {
       x.beginPath();
       x.arc(o.x, o.y, r * 0.38, 0, 7);
       x.fill();
+    } else if (o.kind === 'prototype') {
+      // A prototype: a small window in the dot.
+      const h = r * 0.42;
+      x.fillStyle = bg;
+      x.fillRect(o.x - h, o.y - h * 0.8, h * 2, h * 1.6);
     }
   }
   x.restore();
@@ -721,7 +726,7 @@ export function GraphPage({ focus, mobile }: { focus: string | null; mobile?: bo
           {card ? (
             <>
               <span className={'m-ic sm a-' + card.area}>
-                <Ic n={card.kind === 'skill' ? 'sparkles' : 'file'} s={16} />
+                <Ic n={card.kind === 'skill' ? 'sparkles' : card.kind === 'prototype' ? 'app-window' : 'file'} s={16} />
               </span>
               <span className="m-tx">
                 <span className="m-t">{card.label}</span>

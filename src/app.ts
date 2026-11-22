@@ -3,6 +3,7 @@ import type { AppEnv } from './http/context';
 import { restApp } from './http/rest';
 import { uiApp } from './http/ui';
 import { assetApp } from './http/assets';
+import { prototypeApp } from './http/prototypes';
 import { authApp } from './auth/routes';
 import { devApp } from './auth/dev';
 
@@ -13,6 +14,7 @@ export function buildApp(): Hono<AppEnv> {
   app.route('/', devApp());
   app.route('/', authApp());
   app.route('/', assetApp());
+  app.route('/', prototypeApp());
   app.route('/api/v1/ui', uiApp());
   app.route('/api/v1', restApp());
   app.all('/api/*', (c) => c.json({ error: { code: 'not_found', message: 'No such endpoint' } }, 404));

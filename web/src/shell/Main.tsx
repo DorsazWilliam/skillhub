@@ -4,6 +4,7 @@ import { navigate, type Route } from '../router';
 import { noteVisit } from '../actions';
 import { HomePage, FolderPage } from '../pages/Folder';
 import { DocPage } from '../pages/Doc';
+import { PrototypePage } from '../pages/Prototype';
 import { Empty, Spinner } from '../ui/common';
 import { GraphPage } from '../pages/Graph';
 import { SearchPage } from '../pages/SearchPage';
@@ -61,7 +62,8 @@ function NodePage({ id }: { id: string }): ReactElement {
         )}
       </div>
     );
-  return node.kind === 'doc' ? <DocPage key={node.id} id={node.id} /> : <FolderPage key={node.id} id={node.id} />;
+  if (node.kind === 'doc') return <DocPage key={node.id} id={node.id} />;
+  return node.is_prototype ? <PrototypePage key={node.id} id={node.id} /> : <FolderPage key={node.id} id={node.id} />;
 }
 
 export function Main({ route }: { route: Route }): ReactElement {

@@ -49,7 +49,21 @@ export function visibleOps(scopes: Set<string>): AnyOp[] {
   return OPS.filter((op) => op.mcp && scopes.has(op.scope));
 }
 
-function toolResult(value: unknown): { content: { type: 'text'; text: string }[]; structuredContent?: Record<string, unknown>; isError?: boolean } {
+type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
+
+/** JSON text plus structured content. An `image_base64` field (render_prototype) is sent as an image block instead. */
+export function toolResult(value: unknown): { content: Content[]; structuredContent?: Record<string, unknown>; isError?: boolean } {
+  if (value && typeof value === 'object' && typeof (value as { image_base64?: unknown }).image_base64 === 'string') {
+    const { image_base64, ...rest } = value as Record<string, unknown> & { image_base64: string; mime?: string };
+    const out = { ...rest, image_base64: null };
+    return {
+      content: [
+        { type: 'image', data: image_base64, mimeType: typeof rest.mime === 'string' ? rest.mime : 'image/png' },
+        { type: 'text', text: JSON.stringify(out) },
+      ],
+      structuredContent: out,
+    };
+  }
   return { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value as Record<string, unknown> };
 }
 

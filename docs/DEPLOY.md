@@ -18,6 +18,10 @@ npm run setup
 3. `npx wrangler secret put ENTRA_CLIENT_SECRET` and `npx wrangler secret put SESSION_SECRET`.
 4. `npx wrangler d1 migrations apply DB --remote`.
 
+## Prototype screenshots (Browser Run)
+
+`render_prototype` takes screenshots in Cloudflare Browser Run, through the `browser` binding in `wrangler.jsonc`. The Workers Paid plan includes 10 browser hours a month (a screenshot takes a few seconds), then $0.09 per hour. To turn it off, remove the `browser` block: prototypes still work in the app and through preview links, and `render_prototype` answers that rendering is not configured. Locally, `wrangler dev` runs the binding against a local Chrome it downloads on first use.
+
 ## CI
 
 Both `.github/workflows/deploy.yml` and `bitbucket-pipelines.yml` run typecheck, parity, tests, then on `main` apply migrations and deploy. On GitHub, deploying is opt-in: set the repository variable `DEPLOY_ENABLED` to `true`. Set `CLOUDFLARE_API_TOKEN` (Workers, D1, R2, KV edit permissions on the account, plus Zone DNS edit for the custom domain) and `CLOUDFLARE_ACCOUNT_ID` as secrets.

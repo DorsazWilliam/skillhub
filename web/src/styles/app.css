@@ -151,3 +151,18 @@ body.resizing iframe,body.resizing #gc{pointer-events:none}
   .ustats{grid-template-columns:repeat(2,minmax(0,1fr))}
   .m-app .ustats>div{background:var(--m-card);border-color:transparent}
 }
+/* prototypes: a live, sandboxed preview, rendered at the device's real width and scaled to fit */
+.proto-page{display:flex;flex-direction:column;min-height:100%;padding-bottom:24px}
+.protohead .skic{background:color-mix(in srgb,var(--c-protos) 13%,transparent);color:var(--c-protos)}
+.protohead .frow.sub>.i,.protohead .frow.sub .fn{color:var(--c-protos)}
+.pv-bar{display:flex;align-items:center;gap:8px;margin:-6px 0 10px;flex-wrap:wrap}
+.pv-bar .seg button{gap:6px;display:inline-flex;align-items:center}
+.pv-stage{height:max(520px,calc(100vh - 300px));display:flex;justify-content:center;align-items:flex-start;border:1px solid var(--border);border-radius:14px;background:var(--sunken);overflow:hidden}
+.pv-stage>.empty{align-self:center;margin:auto}
+.pv-frame{display:block;flex:none;border:0;background:#fff;transform-origin:top left}
+.pv-stage.tablet,.pv-stage.phone{padding:20px;background:radial-gradient(circle,color-mix(in srgb,var(--fg) 7%,transparent) 1px,transparent 1.2px) 0 0/22px 22px,var(--sunken)}
+.pv-stage.tablet .pv-frame{border-radius:14px;box-shadow:var(--shadow)}
+.pv-stage.phone .pv-frame{border-radius:28px;box-shadow:0 0 0 8px #0b0f19,var(--shadow-lg)}
+.pv-stage.m-pv{height:70vh}
+.pv-stage.m-pv .pv-frame{width:100%;height:100%}
+@media (max-width:860px){.pv-stage{border-radius:12px}}

@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@cfworker/json-schema": "^4.1.6",
+    "@cloudflare/puppeteer": "^2.0.1",
     "@cloudflare/workers-oauth-provider": "^1.2.4",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-markdown": "^6.5.2",

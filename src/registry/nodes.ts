@@ -122,7 +122,7 @@ export const getNode = defineOp({
   handler: async (ctx) => nodeOut(ctx.az, ctx.node!),
 });
 
-const AREA_FIXED = 'The rules, skills and documentation areas are fixed: they cannot be renamed, moved or deleted';
+const AREA_FIXED = 'The rules, skills, documentation and prototypes areas are fixed: they cannot be renamed, moved or deleted';
 
 /** True when the folder is, or sits inside, a skill folder. */
 async function inSkill(db: D1Database, folder: NodeRow): Promise<boolean> {
@@ -148,6 +148,9 @@ export async function checkPlacement(db: D1Database, parent: NodeRow, kind: 'fol
   } else if (area === 'documentation') {
     if (name === SKILL_MD) throw invalid('SKILL.md belongs in a skill folder under skills/');
     if (format !== 'markdown') throw invalid('Text files (scripts) live inside a skill folder under skills/');
+  } else if (area === 'prototypes') {
+    if (name === SKILL_MD) throw invalid('SKILL.md belongs in a skill folder under skills/');
+    if (isAreaId(parent.id)) throw invalid('Create a folder for the prototype first (create_prototype): files go inside it');
   } else if (area === 'skills') {
     if (name === SKILL_MD) {
       if (isAreaId(parent.id)) throw invalid('Create a folder for the skill first: SKILL.md goes inside it');
@@ -159,7 +162,7 @@ export async function checkPlacement(db: D1Database, parent: NodeRow, kind: 'fol
 }
 
 async function insertNode(ctx: { db: D1Database; actor: { user: { id: string } } }, parent: NodeRow | null, kind: 'folder' | 'doc', rawName: string): Promise<NodeRow> {
-  if (!parent) throw invalid('Choose a parent folder: the top level holds only the rules, skills and documentation areas');
+  if (!parent) throw invalid('Choose a parent folder: the top level holds only the areas');
   if (parent.kind !== 'folder') throw invalid('Parent must be a folder');
   const { name, format } = await checkPlacement(ctx.db, parent, kind, validateName(rawName));
   const id = ulid();
@@ -189,7 +192,8 @@ async function insertNode(ctx: { db: D1Database; actor: { user: { id: string } }
 
 export const createFolder = defineOp({
   name: 'create_folder',
-  summary: 'Create a folder inside skills/ or documentation/ (rules/ has no folders; the top level holds only the three areas). For a skill, use create_skill.',
+  summary:
+    'Create a folder inside skills/, documentation/ or prototypes/ (rules/ has no folders; the top level holds only the areas). For a skill, use create_skill; for a prototype, create_prototype.',
   scope: 'write',
   target: { kind: 'node', field: 'parent', minRole: ROLE.editor, nodeKind: 'folder' },
   input: z.object({ parent: NodeRef, name: z.string().min(1).max(LIMITS.nameChars) }),
@@ -208,7 +212,7 @@ export const createFolder = defineOp({
 export const createDoc = defineOp({
   name: 'create_doc',
   summary:
-    'Create a document in a folder, optionally with initial draft content. Names ending in .sh .py .sql .js .ts .json .yaml .yml .toml .txt .csv .ps1 are text files, allowed only inside a skill folder.',
+    'Create a document in a folder, optionally with initial draft content. Names ending in .sh .py .sql .js .ts .json .yaml .yml .toml .txt .csv .ps1 .html .htm .css .mjs .svg are text files, allowed inside a skill folder or anywhere under prototypes/.',
   scope: 'write',
   target: { kind: 'node', field: 'parent', minRole: ROLE.editor, nodeKind: 'folder' },
   input: z.object({
@@ -329,13 +333,13 @@ export const moveNode = defineOp({
     const sourceParent = await getNodeById(ctx.db, node.parent_id);
     await az.authorize(managerReq, { node: sourceParent });
 
-    if (input.to === '/' || input.to.trim() === '') throw invalid('The top level holds only the rules, skills and documentation areas');
+    if (input.to === '/' || input.to.trim() === '') throw invalid('The top level holds only the areas');
     const dest = await resolveRef(az, input.to);
     if (!dest) throw new AppError('not_found', 'Destination not found');
     if (dest.kind !== 'folder') throw invalid('Destination must be a folder');
     await az.authorize(managerReq, { node: dest });
     const area = areaOfPath(node.path);
-    if (areaOfPath(dest.path) !== area) throw invalid('Items stay in their area: move within rules/, skills/ or documentation/');
+    if (areaOfPath(dest.path) !== area) throw invalid('Items stay in their area: move within rules/, skills/, documentation/ or prototypes/');
     if (node.kind === 'folder' && area === 'rules') throw invalid('rules/ holds rules only: no folders');
     if (node.kind === 'doc' && area === 'skills' && !(await inSkill(ctx.db, dest))) throw invalid('Documents under skills/ live inside a skill folder');
 

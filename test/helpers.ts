@@ -85,11 +85,12 @@ async function jsonCall(raw: Client['raw'], method: string, path: string, body?:
 
 export { fetchSelf };
 
-/** The three fixed areas (migrations/0003). */
+/** The fixed areas (migrations/0003 and 0006). */
 export const AREA = {
   rules: '00000000000000000000000AR1',
   skills: '00000000000000000000000AS1',
   documentation: '00000000000000000000000AD1',
+  prototypes: '00000000000000000000000AP1',
 } as const;
 
 /**

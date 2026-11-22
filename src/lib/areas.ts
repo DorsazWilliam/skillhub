@@ -1,12 +1,13 @@
-/** The three fixed top-level areas. Seeded by migrations/0003 with these ids. */
+/** The fixed top-level areas. Seeded by migrations/0003 (rules, skills, documentation) and 0006 (prototypes) with these ids. */
 export const AREA_IDS = {
   rules: '00000000000000000000000AR1',
   skills: '00000000000000000000000AS1',
   documentation: '00000000000000000000000AD1',
+  prototypes: '00000000000000000000000AP1',
 } as const;
 
 export type Area = keyof typeof AREA_IDS;
-export const AREAS: readonly Area[] = ['rules', 'skills', 'documentation'];
+export const AREAS: readonly Area[] = ['rules', 'skills', 'documentation', 'prototypes'];
 
 const BY_ID = new Map<string, Area>(AREAS.map((a) => [AREA_IDS[a], a]));
 
@@ -29,7 +30,7 @@ export function areaOfPath(path: string): Area | null {
   return first ? areaById(first) : null;
 }
 
-/** Fixed display order: rules, skills, documentation. */
+/** Fixed display order: rules, skills, documentation, prototypes. */
 export function areaOrder(id: string): number {
   const a = areaById(id);
   return a ? AREAS.indexOf(a) : AREAS.length;
@@ -42,8 +43,14 @@ export function normalizeDocName(name: string): string {
   return name.toLowerCase() === 'skill.md' ? SKILL_MD : name;
 }
 
-/** Text file extensions stored as `file` documents: versioned like markdown, served as text, never executed. */
-export const FILE_EXTS = ['sh', 'py', 'sql', 'js', 'ts', 'json', 'yaml', 'yml', 'toml', 'txt', 'csv', 'ps1'] as const;
+/** The file that makes its folder a prototype (under prototypes/). */
+export const PROTO_INDEX = 'index.html';
+
+/** Text file extensions stored as `file` documents: versioned like markdown, served as text, never executed by the hub. */
+export const FILE_EXTS = ['sh', 'py', 'sql', 'js', 'ts', 'json', 'yaml', 'yml', 'toml', 'txt', 'csv', 'ps1', 'html', 'htm', 'css', 'mjs', 'svg'] as const;
+
+/** Formats that only make sense in a prototype (web pages and their styles). */
+export const WEB_EXTS = ['html', 'htm', 'css', 'mjs', 'svg'] as const;
 
 /** 'markdown', or the extension when the name is a supported text file. */
 export function formatOfName(name: string): string {

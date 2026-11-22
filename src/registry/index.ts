@@ -9,6 +9,7 @@ import { getLinks, getGraph } from './links';
 import { publishSkill, getRulesSize } from './skills';
 import { getWarnings, dismissWarning, restoreWarnings } from './warnings';
 import { getUsage } from './usage';
+import { createPrototype, getPrototype, publishPrototype, renderPrototype } from './prototypes';
 import {
   listUsers,
   setUserRole,
@@ -44,10 +45,13 @@ export const OPS: AnyOp[] = [
   getLinks,
   getGraph,
   getRulesSize,
+  getPrototype,
+  renderPrototype,
   // WRITE
   createFolder,
   createDoc,
   createSkill,
+  createPrototype,
   renameNode,
   getDraft,
   updateDraft,
@@ -63,6 +67,7 @@ export const OPS: AnyOp[] = [
   // PUBLISH
   publishVersion,
   publishSkill,
+  publishPrototype,
   unpublish,
   // MANAGE
   listGrants,

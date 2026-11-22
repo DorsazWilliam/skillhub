@@ -18,7 +18,7 @@ export type Modal =
   | { type: 'commit'; id: string; msg: string; pub: boolean }
   | { type: 'publish'; id: string; v: number }
   | { type: 'diff'; id: string; a: number | 'draft'; b: number | 'draft' }
-  | { type: 'skill-publish'; id: string; open: string | null }
+  | { type: 'skill-publish'; id: string; open: string | null; proto?: boolean }
   | { type: 'share'; id: string }
   | { type: 'move'; id: string; dest: string | null }
   | { type: 'export' }

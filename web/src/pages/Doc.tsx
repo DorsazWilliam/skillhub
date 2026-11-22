@@ -9,7 +9,9 @@ import { startEdit, discardDraft, goNode, isMobile } from '../actions';
 import { useUsers, role, type NodeT, type Skill } from '../api/hooks';
 import { useDocModel, useDraftInfo, useLint, pendingFiles, skillMeta, type DocModel } from './docModel';
 import { Crumbs } from './Crumbs';
-import { lazy, Suspense, useState } from 'react';
+import { ProtoHead, useProtoOf } from './Prototype';
+import { lazy, Suspense } from 'react';
+import { FileTabs } from '../ui/FileTabs';
 
 const Editor = lazy(() => import('../editor/Editor'));
 
@@ -67,49 +69,16 @@ export function VersionText({ node }: { node: NodeT }): ReactElement {
   );
 }
 
-type SkillFile = NonNullable<Skill['files']>[number];
-type Tab = { key: string; label: string; icon: string; files?: { f: SkillFile; label: string }[]; go?: string; sub?: boolean };
-
-/** Tabs of the skill's own top level: SKILL.md, sub-skills, then each folder (and any other root file). */
-function skillTabs(files: SkillFile[]): Tab[] {
-  const md = files.find((f) => f.path === 'SKILL.md');
-  const subs = files.filter((f) => f.kind === 'skill');
-  const folders = new Map<string, { f: SkillFile; label: string }[]>();
-  const roots: SkillFile[] = [];
-  for (const f of files) {
-    if (f === md || f.kind === 'skill') continue;
-    const i = f.path.indexOf('/');
-    if (i < 0) roots.push(f);
-    else {
-      const k = f.path.slice(0, i);
-      folders.set(k, [...(folders.get(k) ?? []), { f, label: f.path.slice(i + 1) }]);
-    }
-  }
-  const tabs: Tab[] = [];
-  if (md) tabs.push({ key: 'md', label: 'SKILL.md', icon: 'file', go: md.id });
-  if (subs.length) tabs.push({ key: 'subs', label: 'Sub-skills', icon: 'sparkles', files: subs.map((f) => ({ f, label: f.path })), sub: true });
-  for (const [k, v] of [...folders].sort((a, b) => a[0].localeCompare(b[0]))) tabs.push({ key: 'f:' + k, label: k, icon: 'folder', files: v });
-  for (const f of roots) tabs.push({ key: 'r:' + f.id, label: f.path, icon: f.kind === 'file' ? 'file-code' : 'file', go: f.id });
-  return tabs;
-}
-
 /** Skill header: name, description, and the skill's top level as tabs; a folder tab lists its files (prototype skillHead). */
 export function SkillHead({ m }: { m: DocModel }): ReactElement | null {
   const head = m.head;
-  const cur = m.node?.id;
-  const [sel, setSel] = useState<{ at: string | undefined; key: string } | null>(null);
   if (!m.skillId || !head) return null;
   const meta = skillMeta(head);
   const canPub = m.r >= 3;
   const pend = canPub ? pendingFiles(head).length : 0;
   const path = head.path.split('/').filter(Boolean);
   const folderName = path[path.length - 1] ?? '';
-  const tabs = skillTabs(head.files ?? []);
-  const here = tabs.find((t) => t.go === cur || t.files?.some((x) => x.f.id === cur));
-  const key = sel && sel.at === cur ? sel.key : (here?.key ?? 'md');
-  const open = tabs.find((t) => t.key === key);
   const parent = parentSkill(head);
-  const dirty = (f: SkillFile): boolean => f.kind !== 'skill' && m.r >= 2 && ((f.id === cur && !!m.node?.has_draft) || (f.head_version ?? 0) > (f.published_version ?? 0));
   return (
     <div className="skhead">
       <div className="skt">
@@ -127,41 +96,15 @@ export function SkillHead({ m }: { m: DocModel }): ReactElement | null {
           </button>
         ) : null}
       </div>
-      <div className="stabs" role="tablist">
-        {parent ? (
-          <button className="sback" aria-label={'Back to ' + parent} data-tip={'Back to ' + parent} onClick={() => void goNode('skills/' + parent)}>
-            <Ic n="chev-l" s={14} />
-          </button>
-        ) : null}
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            className={'stab' + (t.key === key ? ' on' : '') + (t.sub ? ' sub' : '')}
-            role="tab"
-            aria-selected={t.key === key}
-            onClick={() => (t.go ? void goNode(t.go) : setSel({ at: cur, key: t.key }))}
-          >
-            <Ic n={t.icon} s={14} />
-            <span>{t.label}</span>
-            {t.files ? <span className="cnt">{t.files.length}</span> : null}
-            {t.go && head.files?.some((f) => f.id === t.go && dirty(f)) ? <span className={'sfd' + (t.go === cur && m.node?.has_draft ? ' dr' : '')} /> : null}
-          </button>
-        ))}
-      </div>
-      {open?.files ? (
-        <div className="flist">
-          {open.files.map(({ f, label }) => (
-            <button key={f.id} className={'frow' + (f.id === cur ? ' on' : '') + (f.kind === 'skill' ? ' sub' : '')} onClick={() => void goNode(f.id)}>
-              <Ic n={f.kind === 'skill' ? 'sparkles' : f.kind === 'file' ? 'file-code' : 'file'} s={15} />
-              <span className="fn">{label}</span>
-              <span className="fi">
-                {f.kind === 'skill' ? 'Sub-skill' : f.published_version ? 'v' + f.published_version : 'Not published'}
-                {dirty(f) ? <span className={'sfd' + (f.id === cur && m.node?.has_draft ? ' dr' : '')} /> : null}
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <FileTabs
+        files={head.files ?? []}
+        cur={m.node?.id}
+        curHasDraft={!!m.node?.has_draft}
+        canEdit={m.r >= 2}
+        lead={{ file: 'SKILL.md' }}
+        sub={{ label: 'Sub-skills', icon: 'sparkles', rowLabel: 'Sub-skill' }}
+        back={parent ? { label: parent, go: 'skills/' + parent } : undefined}
+      />
     </div>
   );
 }
@@ -340,8 +283,15 @@ export function DocPage({ id }: { id: string }): ReactElement {
         <DocActs m={m} />
       </div>
       <SkillHead m={m} />
+      <DocProtoHead node={m.node} />
       <Banner m={m} />
       <DocBody m={m} />
     </div>
   );
+}
+
+/** A file inside a prototype gets the prototype's header and tabs. */
+export function DocProtoHead({ node }: { node: NodeT }): ReactElement | null {
+  const proto = useProtoOf(node.area === 'prototypes' ? node.id : null);
+  return proto ? <ProtoHead protoId={proto.id} cur={node.id} curHasDraft={!!node.has_draft} /> : null;
 }

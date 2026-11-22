@@ -21,6 +21,16 @@ Skills are instructions that other agents will follow. A malicious or careless e
 
 Review publisher grants like you review production deploy rights.
 
+## Prototypes
+
+Prototypes are HTML, CSS and JavaScript that anyone with write access can author, so they are treated as untrusted pages:
+
+- They are only served from `/p/<token>/...`, never from the app's own paths. The token is a signed capability (HMAC-SHA256 with `SESSION_SECRET`) naming the prototype, the mode (published or working copy) and the user who minted it, valid for one hour. Every request re-checks that the user is active and still has access (viewer for published, editor for the working copy).
+- Responses carry `Content-Security-Policy: sandbox allow-scripts allow-forms allow-popups allow-modals allow-downloads`, without `allow-same-origin`. The page runs in an opaque origin even when the link is opened directly, so its scripts cannot read the session cookie or call the API as the viewer. The app's frame adds the same `sandbox` attribute.
+- External scripts, styles and fonts are allowed: the risks are the same as opening the file locally. `Referrer-Policy: no-referrer` keeps the token out of requests to those sites.
+- A preview link works for anyone who has it until it expires: treat it like a password. Revoking access or suspending the user stops it immediately.
+- Rendered screenshots (`render_prototype`) are stored in R2 under `renders/`, served from `/r/<token>` (24 hours, same re-check) and deleted by the cron after a day.
+
 ## Web hardening
 
 - Strict CSP: `script-src 'self'`, no inline script, `frame-ancestors 'none'`, `object-src 'none'`. HSTS, `nosniff`, `Referrer-Policy: same-origin`, `X-Frame-Options: DENY`.

@@ -194,6 +194,15 @@ export interface SkillMember {
 
 /** Every document of a skill folder (SKILL.md first), not descending into sub-skills, which are listed as entries. No access check. */
 export async function skillMembers(db: D1Database, folder: NodeRow): Promise<SkillMember[]> {
+  return folderMembers(db, folder, SKILL_MD);
+}
+
+/**
+ * Every document under a folder, with organisational folders walked through. A nested folder holding `marker`
+ * (SKILL.md for skills, index.html for prototypes) is listed as one `sub` entry and not descended into. No access check.
+ */
+export async function folderMembers(db: D1Database, folder: NodeRow, marker: string): Promise<SkillMember[]> {
+  const isMarker = (name: string): boolean => name.toLowerCase() === marker.toLowerCase();
   const rows = await all<NodeRow>(
     db,
     'SELECT * FROM nodes WHERE path > ? AND path < ? AND deleted_at IS NULL LIMIT 5000',
@@ -205,7 +214,7 @@ export async function skillMembers(db: D1Database, folder: NodeRow): Promise<Ski
   for (const r of rows) {
     if (!r.parent_id) continue;
     kids.set(r.parent_id, [...(kids.get(r.parent_id) ?? []), r]);
-    if (r.kind === 'doc' && r.name === SKILL_MD) skills.add(r.parent_id);
+    if (r.kind === 'doc' && isMarker(r.name)) skills.add(r.parent_id);
   }
   const out: SkillMember[] = [];
   const walk = (id: string, pre: string, via: string[]): void => {
@@ -219,7 +228,7 @@ export async function skillMembers(db: D1Database, folder: NodeRow): Promise<Ski
   walk(folder.id, '', []);
   return out.sort(
     (a, b) =>
-      (a.node.name === SKILL_MD && a.rel === SKILL_MD ? -1 : b.node.name === SKILL_MD && b.rel === SKILL_MD ? 1 : 0) ||
+      (isMarker(a.rel) ? -1 : isMarker(b.rel) ? 1 : 0) ||
       (a.sub ? 1 : 0) - (b.sub ? 1 : 0) ||
       a.rel.localeCompare(b.rel),
   );

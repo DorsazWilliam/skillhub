@@ -3,7 +3,7 @@ import { Ic } from '../lib/icons';
 import { ago, AREAS, areaKey, RULES_CAP, type AreaKey } from '../lib/util';
 import { Av, DocMark, SkillMark, IB, Empty, Spinner, nodeIcon } from '../ui/common';
 import { setUI, openMenu } from '../state';
-import { goNode, newDoc, newFolder, newSkill } from '../actions';
+import { goNode, newDoc, newFolder, newSkill, newPrototype } from '../actions';
 import { useChildren, useNode, useChain, useGraph, useRulesSize, role, type Item, type NodeT } from '../api/hooks';
 import { LintBtn } from './Doc';
 import { Crumbs } from './Crumbs';
@@ -12,24 +12,35 @@ import { navigate } from '../router';
 export function AreaChip({ k }: { k: AreaKey }): ReactElement {
   return (
     <span className="chip" data-tip={AREAS[k].tip}>
-      <Ic n={k === 'rules' ? 'bot' : k === 'skills' ? 'search' : 'link'} s={12} />
-      {k === 'rules' ? 'Always on' : k === 'skills' ? 'On demand' : 'Linked'}
+      <Ic n={k === 'rules' ? 'bot' : k === 'skills' ? 'search' : k === 'protos' ? 'eye' : 'link'} s={12} />
+      {k === 'rules' ? 'Always on' : k === 'skills' ? 'On demand' : k === 'protos' ? 'Previewed' : 'Linked'}
     </span>
   );
 }
 
-/** True when the folder is a skill or sits inside one (new files and sub-skills go there). */
+/** True when the folder is a skill or a prototype, or sits inside one (new files go there). */
 export function useInSkill(f: NodeT | undefined): boolean {
   const chain = useChain(f?.id ?? null);
   if (!f) return false;
-  return (chain.data ?? [f]).some((n) => n.kind === 'folder' && !n.is_area && !!n.is_skill);
+  return (chain.data ?? [f]).some((n) => n.kind === 'folder' && !n.is_area && (!!n.is_skill || !!n.is_prototype));
 }
 
-export type NewKind = { act: 'doc' | 'folder' | 'skill'; icon: string; tip: string; lbl: string };
+export type NewKind = { act: 'doc' | 'folder' | 'skill' | 'prototype'; icon: string; tip: string; lbl: string };
 
 export function newKinds(f: NodeT | undefined, inSkill: boolean): NewKind[] {
   if (!f || role(f) < 2) return [];
   const a = areaKey(f.area);
+  if (a === 'protos') {
+    if (inSkill)
+      return [
+        { act: 'doc', icon: 'file-plus', tip: 'New file (index.html, styles.css, app.js...)', lbl: 'File' },
+        { act: 'folder', icon: 'folder-plus', tip: 'New folder', lbl: 'Folder' },
+      ];
+    return [
+      { act: 'prototype', icon: 'app-window', tip: 'New prototype', lbl: 'Prototype' },
+      { act: 'folder', icon: 'folder-plus', tip: 'New folder', lbl: 'Folder' },
+    ];
+  }
   if (a === 'rules') return f.is_area ? [{ act: 'doc', icon: 'file-plus', tip: 'New rule', lbl: 'Rule' }] : [];
   if (a === 'skills')
     return inSkill
@@ -52,6 +63,7 @@ export function runNew(act: NewKind['act'], parent: string): void {
   setUI({ menu: null });
   if (act === 'doc') void newDoc(parent);
   else if (act === 'folder') void newFolder(parent);
+  else if (act === 'prototype') void newPrototype(parent);
   else void newSkill(parent);
 }
 
@@ -220,10 +232,11 @@ export function FolderPage({ id }: { id: string }): ReactElement {
 /** Counts per area for the home tiles: skills count skill folders, other areas count documents (from the graph). */
 export function useAreaCounts(): Record<AreaKey, number | null> {
   const g = useGraph();
-  const out: Record<AreaKey, number | null> = { rules: null, skills: null, docs: null };
+  const out: Record<AreaKey, number | null> = { rules: null, skills: null, docs: null, protos: null };
   if (!g.data) return out;
-  const c: Record<AreaKey, number> = { rules: 0, skills: 0, docs: 0 };
-  for (const n of g.data.nodes) c[areaKey(n.area)]++;
+  const c: Record<AreaKey, number> = { rules: 0, skills: 0, docs: 0, protos: 0 };
+  // Prototypes count prototype folders, not the notes inside them.
+  for (const n of g.data.nodes) if (areaKey(n.area) !== 'protos' || n.kind === 'prototype') c[areaKey(n.area)]++;
   return c;
 }
 

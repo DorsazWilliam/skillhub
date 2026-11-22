@@ -112,14 +112,17 @@ export function place(node: TNode, skills: Set<string>): Placed {
   return { id: node.id, area: areaOfPath(node.path), chain, skillId };
 }
 
-/** Allowed directions: rules -> skills, documentation; skills -> documentation and inside their own skill; documentation -> documentation. */
+/**
+ * Allowed directions: rules -> skills, documentation; skills -> documentation, prototypes and inside their own skill;
+ * documentation -> documentation, prototypes; prototypes -> documentation, prototypes.
+ */
 export function linkAllowed(src: Placed, tgt: Placed): boolean {
   if (src.area === 'rules') return tgt.area === 'skills' || tgt.area === 'documentation';
   if (src.area === 'skills') {
-    if (tgt.area === 'documentation') return true;
+    if (tgt.area === 'documentation' || tgt.area === 'prototypes') return true;
     return !!src.skillId && tgt.chain.includes(src.skillId);
   }
-  return tgt.area === 'documentation';
+  return tgt.area === 'documentation' || tgt.area === 'prototypes';
 }
 
 export interface ChainNode {

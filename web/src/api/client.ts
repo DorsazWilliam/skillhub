@@ -73,11 +73,12 @@ export type ListChildrenOutput = {
     path: string;
     parent_id: string | null;
     access: "none" | "viewer" | "editor" | "publisher" | "manager";
-    area: "rules" | "skills" | "documentation" | null;
+    area: "rules" | "skills" | "documentation" | "prototypes" | null;
     is_area: boolean;
     canonical_path: string | null;
     inherit?: boolean;
     is_skill?: boolean;
+    is_prototype?: boolean;
     format?: string;
     published_version?: number | null;
     head_version?: number | null;
@@ -112,11 +113,12 @@ export type GetNodeOutput = {
   path: string;
   parent_id: string | null;
   access: "none" | "viewer" | "editor" | "publisher" | "manager";
-  area: "rules" | "skills" | "documentation" | null;
+  area: "rules" | "skills" | "documentation" | "prototypes" | null;
   is_area: boolean;
   canonical_path: string | null;
   inherit?: boolean;
   is_skill?: boolean;
+  is_prototype?: boolean;
   format?: string;
   published_version?: number | null;
   head_version?: number | null;
@@ -193,11 +195,12 @@ export type SearchOutput = {
       path: string;
       parent_id: string | null;
       access: "none" | "viewer" | "editor" | "publisher" | "manager";
-      area: "rules" | "skills" | "documentation" | null;
+      area: "rules" | "skills" | "documentation" | "prototypes" | null;
       is_area: boolean;
       canonical_path: string | null;
       inherit?: boolean;
       is_skill?: boolean;
+      is_prototype?: boolean;
       format?: string;
       published_version?: number | null;
       head_version?: number | null;
@@ -294,22 +297,22 @@ export type GetLinksOutput = {
     id: string;
     skill_id: string | null;
     canonical_path: string | null;
-    area: "rules" | "skills" | "documentation" | null;
+    area: "rules" | "skills" | "documentation" | "prototypes" | null;
     status: "ok" | "wrong_direction";
   }>;
 };
 
 /** The link graph of everything you can read: skills and documents as nodes, [[links]] as edges. Optionally one area. (scope: read) */
 export type GetGraphInput = {
-  area?: "rules" | "skills" | "documentation";
+  area?: "rules" | "skills" | "documentation" | "prototypes";
 };
 export type GetGraphOutput = {
   nodes: Array<{
     id: string;
     open_id: string;
-    kind: "skill" | "doc";
+    kind: "skill" | "doc" | "prototype";
     label: string;
-    area: "rules" | "skills" | "documentation";
+    area: "rules" | "skills" | "documentation" | "prototypes";
     canonical_path: string | null;
     published: boolean;
   }>;
@@ -336,7 +339,57 @@ export type GetRulesSizeOutput = {
   }>;
 };
 
-/** Create a folder inside skills/ or documentation/ (rules/ has no folders; the top level holds only the three areas). For a skill, use create_skill. (scope: write) */
+/** Get a prototype (its folder, or any file in it): its files and a preview URL valid for one hour. Open the URL in your own browser to look at it and interact with it; edit files with update_draft and reload. Without a browser, use render_prototype. (scope: read) */
+export type GetPrototypeInput = {
+  prototype: string;
+  version?: "published" | "working";
+};
+export type GetPrototypeOutput = {
+  id: string;
+  name: string;
+  path: string;
+  canonical_path: string | null;
+  mode: "published" | "working";
+  preview_url: string;
+  expires_at: number;
+  published: boolean;
+  files: Array<{
+    id: string;
+    path: string;
+    kind: "markdown" | "file" | "skill";
+    format: string | null;
+    published_version: number | null;
+    head_version: number | null;
+  }>;
+};
+
+/** Screenshot a prototype in a cloud browser and return the image, plus console messages and page errors. For agents without a browser; with one, open get_prototype's preview_url instead (faster, interactive). (scope: read) */
+export type RenderPrototypeInput = {
+  prototype: string;
+  version?: "published" | "working";
+  page?: string;
+  width?: number;
+  height?: number;
+  full_page?: boolean;
+  wait_ms?: number;
+  color_scheme?: "light" | "dark";
+};
+export type RenderPrototypeOutput = {
+  image_url: string;
+  expires_at: number;
+  width: number;
+  height: number;
+  mime: "image/png";
+  bytes: number;
+  console: Array<{
+    level: string;
+    text: string;
+  }>;
+  errors: Array<string>;
+  image_base64: string | null;
+};
+
+/** Create a folder inside skills/, documentation/ or prototypes/ (rules/ has no folders; the top level holds only the areas). For a skill, use create_skill; for a prototype, create_prototype. (scope: write) */
 export type CreateFolderInput = {
   parent: string;
   name: string;
@@ -348,11 +401,12 @@ export type CreateFolderOutput = {
   path: string;
   parent_id: string | null;
   access: "none" | "viewer" | "editor" | "publisher" | "manager";
-  area: "rules" | "skills" | "documentation" | null;
+  area: "rules" | "skills" | "documentation" | "prototypes" | null;
   is_area: boolean;
   canonical_path: string | null;
   inherit?: boolean;
   is_skill?: boolean;
+  is_prototype?: boolean;
   format?: string;
   published_version?: number | null;
   head_version?: number | null;
@@ -360,7 +414,7 @@ export type CreateFolderOutput = {
   updated_at: number;
 };
 
-/** Create a document in a folder, optionally with initial draft content. Names ending in .sh .py .sql .js .ts .json .yaml .yml .toml .txt .csv .ps1 are text files, allowed only inside a skill folder. (scope: write) */
+/** Create a document in a folder, optionally with initial draft content. Names ending in .sh .py .sql .js .ts .json .yaml .yml .toml .txt .csv .ps1 .html .htm .css .mjs .svg are text files, allowed inside a skill folder or anywhere under prototypes/. (scope: write) */
 export type CreateDocInput = {
   parent: string;
   name: string;
@@ -374,11 +428,12 @@ export type CreateDocOutput = {
     path: string;
     parent_id: string | null;
     access: "none" | "viewer" | "editor" | "publisher" | "manager";
-    area: "rules" | "skills" | "documentation" | null;
+    area: "rules" | "skills" | "documentation" | "prototypes" | null;
     is_area: boolean;
     canonical_path: string | null;
     inherit?: boolean;
     is_skill?: boolean;
+    is_prototype?: boolean;
     format?: string;
     published_version?: number | null;
     head_version?: number | null;
@@ -402,11 +457,12 @@ export type CreateSkillOutput = {
     path: string;
     parent_id: string | null;
     access: "none" | "viewer" | "editor" | "publisher" | "manager";
-    area: "rules" | "skills" | "documentation" | null;
+    area: "rules" | "skills" | "documentation" | "prototypes" | null;
     is_area: boolean;
     canonical_path: string | null;
     inherit?: boolean;
     is_skill?: boolean;
+    is_prototype?: boolean;
     format?: string;
     published_version?: number | null;
     head_version?: number | null;
@@ -420,11 +476,12 @@ export type CreateSkillOutput = {
     path: string;
     parent_id: string | null;
     access: "none" | "viewer" | "editor" | "publisher" | "manager";
-    area: "rules" | "skills" | "documentation" | null;
+    area: "rules" | "skills" | "documentation" | "prototypes" | null;
     is_area: boolean;
     canonical_path: string | null;
     inherit?: boolean;
     is_skill?: boolean;
+    is_prototype?: boolean;
     format?: string;
     published_version?: number | null;
     head_version?: number | null;
@@ -432,6 +489,54 @@ export type CreateSkillOutput = {
     updated_at: number;
   };
   etag: string;
+};
+
+/** Create a prototype: a folder under prototypes/ with an index.html draft (plus styles.css and app.js unless bare). Add more files with create_doc, edit them with update_draft, then commit and publish_prototype. (scope: write) */
+export type CreatePrototypeInput = {
+  parent: string;
+  name: string;
+  html?: string;
+  bare?: boolean;
+};
+export type CreatePrototypeOutput = {
+  folder: {
+    id: string;
+    kind: "folder" | "doc";
+    name: string;
+    path: string;
+    parent_id: string | null;
+    access: "none" | "viewer" | "editor" | "publisher" | "manager";
+    area: "rules" | "skills" | "documentation" | "prototypes" | null;
+    is_area: boolean;
+    canonical_path: string | null;
+    inherit?: boolean;
+    is_skill?: boolean;
+    is_prototype?: boolean;
+    format?: string;
+    published_version?: number | null;
+    head_version?: number | null;
+    has_draft?: boolean | null;
+    updated_at: number;
+  };
+  files: Array<{
+    id: string;
+    kind: "folder" | "doc";
+    name: string;
+    path: string;
+    parent_id: string | null;
+    access: "none" | "viewer" | "editor" | "publisher" | "manager";
+    area: "rules" | "skills" | "documentation" | "prototypes" | null;
+    is_area: boolean;
+    canonical_path: string | null;
+    inherit?: boolean;
+    is_skill?: boolean;
+    is_prototype?: boolean;
+    format?: string;
+    published_version?: number | null;
+    head_version?: number | null;
+    has_draft?: boolean | null;
+    updated_at: number;
+  }>;
 };
 
 /** Rename a folder or document. (scope: write) */
@@ -446,11 +551,12 @@ export type RenameNodeOutput = {
   path: string;
   parent_id: string | null;
   access: "none" | "viewer" | "editor" | "publisher" | "manager";
-  area: "rules" | "skills" | "documentation" | null;
+  area: "rules" | "skills" | "documentation" | "prototypes" | null;
   is_area: boolean;
   canonical_path: string | null;
   inherit?: boolean;
   is_skill?: boolean;
+  is_prototype?: boolean;
   format?: string;
   published_version?: number | null;
   head_version?: number | null;
@@ -688,6 +794,29 @@ export type PublishSkillOutput = {
   }>;
 };
 
+/** Publish a whole prototype at once: the latest committed version of every changed file in it, atomically. Commit drafts first. (scope: publish) */
+export type PublishPrototypeInput = {
+  prototype: string;
+};
+export type PublishPrototypeOutput = {
+  prototype: string;
+  published: number;
+  files: Array<{
+    id: string;
+    path: string;
+    status: "published" | "unchanged" | "empty" | "forbidden";
+    from: number | null;
+    to: number | null;
+    has_draft: boolean;
+    warnings: Array<{
+      code: string;
+      message: string;
+      key: string;
+      level: "warn" | "broken";
+    }>;
+  }>;
+};
+
 /** Remove the published pointer. Viewers lose access to the content. (scope: publish) */
 export type UnpublishInput = {
   doc: string;
@@ -772,11 +901,12 @@ export type MoveNodeOutput = {
     path: string;
     parent_id: string | null;
     access: "none" | "viewer" | "editor" | "publisher" | "manager";
-    area: "rules" | "skills" | "documentation" | null;
+    area: "rules" | "skills" | "documentation" | "prototypes" | null;
     is_area: boolean;
     canonical_path: string | null;
     inherit?: boolean;
     is_skill?: boolean;
+    is_prototype?: boolean;
     format?: string;
     published_version?: number | null;
     head_version?: number | null;
@@ -807,11 +937,12 @@ export type RestoreNodeOutput = {
   path: string;
   parent_id: string | null;
   access: "none" | "viewer" | "editor" | "publisher" | "manager";
-  area: "rules" | "skills" | "documentation" | null;
+  area: "rules" | "skills" | "documentation" | "prototypes" | null;
   is_area: boolean;
   canonical_path: string | null;
   inherit?: boolean;
   is_skill?: boolean;
+  is_prototype?: boolean;
   format?: string;
   published_version?: number | null;
   head_version?: number | null;
@@ -1001,11 +1132,12 @@ export type ListTeamAccessOutput = {
       path: string;
       parent_id: string | null;
       access: "none" | "viewer" | "editor" | "publisher" | "manager";
-      area: "rules" | "skills" | "documentation" | null;
+      area: "rules" | "skills" | "documentation" | "prototypes" | null;
       is_area: boolean;
       canonical_path: string | null;
       inherit?: boolean;
       is_skill?: boolean;
+      is_prototype?: boolean;
       format?: string;
       published_version?: number | null;
       head_version?: number | null;
@@ -1107,9 +1239,12 @@ export const api = {
   get_links: (input: GetLinksInput): Promise<GetLinksOutput> => call<GetLinksOutput>("GET", "/nodes/{node}/links", input as Record<string, unknown>, ["node"]),
   get_graph: (input: GetGraphInput): Promise<GetGraphOutput> => call<GetGraphOutput>("GET", "/graph", input as Record<string, unknown>, []),
   get_rules_size: (input: GetRulesSizeInput = {}): Promise<GetRulesSizeOutput> => call<GetRulesSizeOutput>("GET", "/rules/size", input as Record<string, unknown>, []),
+  get_prototype: (input: GetPrototypeInput): Promise<GetPrototypeOutput> => call<GetPrototypeOutput>("GET", "/prototypes/{prototype}", input as Record<string, unknown>, ["prototype"]),
+  render_prototype: (input: RenderPrototypeInput): Promise<RenderPrototypeOutput> => call<RenderPrototypeOutput>("POST", "/prototypes/{prototype}/render", input as Record<string, unknown>, ["prototype"]),
   create_folder: (input: CreateFolderInput): Promise<CreateFolderOutput> => call<CreateFolderOutput>("POST", "/folders", input as Record<string, unknown>, []),
   create_doc: (input: CreateDocInput): Promise<CreateDocOutput> => call<CreateDocOutput>("POST", "/docs", input as Record<string, unknown>, []),
   create_skill: (input: CreateSkillInput): Promise<CreateSkillOutput> => call<CreateSkillOutput>("POST", "/skills", input as Record<string, unknown>, []),
+  create_prototype: (input: CreatePrototypeInput): Promise<CreatePrototypeOutput> => call<CreatePrototypeOutput>("POST", "/prototypes", input as Record<string, unknown>, []),
   rename_node: (input: RenameNodeInput): Promise<RenameNodeOutput> => call<RenameNodeOutput>("PATCH", "/nodes/{node}", input as Record<string, unknown>, ["node"]),
   get_draft: (input: GetDraftInput): Promise<GetDraftOutput> => call<GetDraftOutput>("GET", "/docs/{doc}/draft", input as Record<string, unknown>, ["doc"]),
   update_draft: (input: UpdateDraftInput): Promise<UpdateDraftOutput> => call<UpdateDraftOutput>("PUT", "/docs/{doc}/draft", input as Record<string, unknown>, ["doc"]),
@@ -1124,6 +1259,7 @@ export const api = {
   restore_warnings: (input: RestoreWarningsInput): Promise<RestoreWarningsOutput> => call<RestoreWarningsOutput>("POST", "/nodes/{node}/warnings/restore", input as Record<string, unknown>, ["node"]),
   publish_version: (input: PublishVersionInput): Promise<PublishVersionOutput> => call<PublishVersionOutput>("POST", "/docs/{doc}/publish", input as Record<string, unknown>, ["doc"]),
   publish_skill: (input: PublishSkillInput): Promise<PublishSkillOutput> => call<PublishSkillOutput>("POST", "/skills/{skill}/publish", input as Record<string, unknown>, ["skill"]),
+  publish_prototype: (input: PublishPrototypeInput): Promise<PublishPrototypeOutput> => call<PublishPrototypeOutput>("POST", "/prototypes/{prototype}/publish", input as Record<string, unknown>, ["prototype"]),
   unpublish: (input: UnpublishInput): Promise<UnpublishOutput> => call<UnpublishOutput>("POST", "/docs/{doc}/unpublish", input as Record<string, unknown>, ["doc"]),
   list_grants: (input: ListGrantsInput): Promise<ListGrantsOutput> => call<ListGrantsOutput>("GET", "/folders/{folder}/grants", input as Record<string, unknown>, ["folder"]),
   grant_access: (input: GrantAccessInput): Promise<GrantAccessOutput> => call<GrantAccessOutput>("POST", "/folders/{folder}/grants", input as Record<string, unknown>, ["folder"]),

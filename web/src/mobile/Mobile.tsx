@@ -4,11 +4,11 @@ import { Av, TeamAv, ClientAv, SkillMark, DocMark, Empty, Spinner, nodeIcon } fr
 import { Confirm } from '../ui/feedback';
 import { useRoute, navigate, type Route } from '../router';
 import { useUI, setUI, openMenu, isDark, toggleTheme, getUI } from '../state';
-import { useMe, useChildren, useChain, useNode, useUsers, useTeams, role, qc, type Item, type NodeT } from '../api/hooks';
+import { useMe, useChildren, useChain, useNode, useUsers, useTeams, role, qc, type Item, type NodeT, usePrototype } from '../api/hooks';
 import { goNode, leaveEdit, openCommit, discardDraft, logout, startEdit } from '../actions';
 import { useResolvedNode } from '../shell/Main';
 import { useDocModel } from '../pages/docModel';
-import { SkillHead, Banner, DocBody, VersionText, LintBtn } from '../pages/Doc';
+import { SkillHead, Banner, DocBody, VersionText, LintBtn, DocProtoHead } from '../pages/Doc';
 import { AreaChip, RulesMeter, useAreaCounts } from '../pages/Folder';
 import { DrawerContent } from '../shell/Drawer';
 import { GraphPage } from '../pages/Graph';
@@ -101,7 +101,14 @@ function MRow({ n, parent }: { n: Item; parent: NodeT }): ReactElement {
   let sub = '';
   let trail: ReactNode = null;
   if (n.kind === 'folder') {
-    if (sk) {
+    if (n.is_prototype) {
+      icon = (
+        <span className="m-ic sm a-protos">
+          <Ic n="app-window" s={16} />
+        </span>
+      );
+      trail = <span className="m-v">{n.children ?? ''}</span>;
+    } else if (sk) {
       sub = n.skill?.description ?? '';
       icon = (
         <span className="m-ic sm a-skills">
@@ -228,6 +235,7 @@ function FolderScreen({ f, anim, onBack }: { f: NodeT; anim: string; onBack: () 
       body={
         <>
           <div className="m-meta">{meta}</div>
+          {f.is_prototype ? <MProtoPreview id={f.id} /> : null}
           {ar && f.area === 'rules' ? (
             <div className="m-pad">
               <RulesMeter />
@@ -259,6 +267,25 @@ function FolderScreen({ f, anim, onBack }: { f: NodeT; anim: string; onBack: () 
   );
 }
 
+/** A prototype on the phone: its live preview, full width, above its files. */
+function MProtoPreview({ id }: { id: string }): ReactElement {
+  const p = usePrototype(id);
+  if (!p.data) return <Spinner />;
+  if (p.data.mode === 'published' && !p.data.published)
+    return (
+      <div className="m-pad muted" style={{ fontSize: 14 }}>
+        Not published yet
+      </div>
+    );
+  return (
+    <div className="m-pad">
+      <div className="pv-stage desktop m-pv">
+        <iframe className="pv-frame" title="Preview" src={p.data.preview_url} sandbox="allow-scripts allow-forms allow-popups allow-modals" referrerPolicy="no-referrer" />
+      </div>
+    </div>
+  );
+}
+
 function DocScreen({ d, anim, onBack }: { d: NodeT; anim: string; onBack: () => void }): ReactElement {
   const m = useDocModel(d.id);
   const r = m.r;
@@ -286,6 +313,7 @@ function DocScreen({ d, anim, onBack }: { d: NodeT; anim: string; onBack: () => 
           </div>
           <div className="m-page">
             <SkillHead m={m} />
+            <DocProtoHead node={d} />
             <Banner m={m} />
             <DocBody m={m} skipH1={!!h1} />
           </div>

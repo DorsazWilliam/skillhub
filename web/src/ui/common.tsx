@@ -124,10 +124,14 @@ export function scopeChips(sc: string[]): ReactElement[] {
 }
 
 /** Icon of a tree node (prototype nodeIcon). */
-export function nodeIcon(n: { kind: 'folder' | 'doc'; is_area?: boolean; area?: string | null; is_skill?: boolean; name: string; format?: string }, open = false): string {
+export function nodeIcon(
+  n: { kind: 'folder' | 'doc'; is_area?: boolean; area?: string | null; is_skill?: boolean; is_prototype?: boolean; name: string; format?: string },
+  open = false,
+): string {
   if (n.kind === 'folder') {
-    if (n.is_area) return n.area === 'rules' ? 'scroll' : n.area === 'skills' ? 'sparkles' : 'book';
+    if (n.is_area) return n.area === 'rules' ? 'scroll' : n.area === 'skills' ? 'sparkles' : n.area === 'prototypes' ? 'app-window' : 'book';
     if (n.is_skill) return 'sparkles';
+    if (n.is_prototype) return 'app-window';
     return open ? 'folder-open' : 'folder';
   }
   return n.format && n.format !== 'markdown' ? 'file-code' : 'file';

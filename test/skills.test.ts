@@ -18,13 +18,14 @@ async function save(c: Client, doc: string, content: string, publishWith?: Clien
 }
 
 describe('areas', () => {
-  it('the top level is exactly rules, skills, documentation, in that order', async () => {
+  it('the top level is exactly rules, skills, documentation, prototypes, in that order', async () => {
     const owner = await sessionClient(await makeUser({ role: 'owner' }));
     const top = await owner.call('GET', '/children');
     expect(top.json.items.map((n: { id: string; is_area: boolean }) => [n.id, n.is_area])).toEqual([
       [AREA.rules, true],
       [AREA.skills, true],
       [AREA.documentation, true],
+      [AREA.prototypes, true],
     ]);
   });
 
@@ -39,7 +40,7 @@ describe('areas', () => {
     const f = (await owner.call('POST', '/folders', { parent: AREA.documentation, name: 'f-' + uid() })).json.id;
     expect((await owner.call('POST', `/nodes/${f}/move`, { to: '/' })).status).toBe(400);
     const top = await owner.call('GET', '/children');
-    expect(top.json.items).toHaveLength(3);
+    expect(top.json.items).toHaveLength(4);
   });
 
   it('rules hold markdown rules only: no folders, no files, no SKILL.md', async () => {

@@ -42,24 +42,27 @@ export type Access = 'none' | 'viewer' | 'editor' | 'publisher' | 'manager';
 export const ROLE_N: Record<Access, number> = { none: 0, viewer: 1, editor: 2, publisher: 3, manager: 4 };
 export const ROLE_KEY = ['none', 'viewer', 'editor', 'publisher', 'manager'] as const;
 
-/** The three fixed areas. Keys follow the prototype (docs), names follow the API (documentation). */
-export type AreaKey = 'rules' | 'skills' | 'docs';
-export type AreaName = 'rules' | 'skills' | 'documentation';
+/** The fixed areas. Keys follow the prototype (docs), names follow the API (documentation). */
+export type AreaKey = 'rules' | 'skills' | 'docs' | 'protos';
+export type AreaName = 'rules' | 'skills' | 'documentation' | 'prototypes';
 export const AREAS: Record<AreaKey, { name: AreaName; icon: string; label: string; tip: string }> = {
   rules: { name: 'rules', icon: 'scroll', label: 'Rules', tip: 'Always on' },
   skills: { name: 'skills', icon: 'sparkles', label: 'Skills', tip: 'Loaded when relevant' },
   docs: { name: 'documentation', icon: 'book', label: 'Documentation', tip: 'Linked reference' },
+  protos: { name: 'prototypes', icon: 'app-window', label: 'Prototypes', tip: 'Clickable mockups' },
 };
-export const AREA_KEYS: AreaKey[] = ['rules', 'skills', 'docs'];
-export const areaKey = (a: AreaName | null | undefined): AreaKey => (a === 'rules' ? 'rules' : a === 'skills' ? 'skills' : 'docs');
+export const AREA_KEYS: AreaKey[] = ['rules', 'skills', 'docs', 'protos'];
+export const areaKey = (a: AreaName | null | undefined): AreaKey =>
+  a === 'rules' ? 'rules' : a === 'skills' ? 'skills' : a === 'prototypes' ? 'protos' : 'docs';
 export const LINK_RULE: Record<AreaKey, string> = {
   rules: 'Rules link to skills and documentation',
-  skills: 'Skills link to documentation and their own files',
-  docs: 'Documentation links to documentation',
+  skills: 'Skills link to documentation, prototypes and their own files',
+  docs: 'Documentation links to documentation and prototypes',
+  protos: 'Prototype notes link to documentation and prototypes',
 };
 export const RULES_CAP = 8192;
 
-export const FILE_RE = /\.(sh|py|sql|js|ts|json|ya?ml|toml|txt|csv|ps1)$/i;
+export const FILE_RE = /\.(sh|py|sql|js|ts|json|ya?ml|toml|txt|csv|ps1|html?|css|mjs|svg)$/i;
 export const isCodeName = (name: string): boolean => FILE_RE.test(name);
 
 export const SCOPES: [string, string, string, string][] = [

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkout flow</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <span class="logo">A</span>
+      <b>Acme Store</b>
+      <ol class="steps">
+        <li class="on" data-step="1">Cart</li>
+        <li data-step="2">Shipping</li>
+        <li data-step="3">Payment</li>
+      </ol>
+    </header>
+
+    <main>
+      <section class="panel" data-panel="1">
+        <h1>Your cart</h1>
+        <ul class="lines">
+          <li><span class="thumb t1"></span><div><b>Trail runner 2</b><small>Size 42 · Slate</small></div><span class="qty"><button data-q="-1">−</button><i>1</i><button data-q="1">+</button></span><b class="price" data-unit="129">€129</b></li>
+          <li><span class="thumb t2"></span><div><b>Merino socks</b><small>3 pairs</small></div><span class="qty"><button data-q="-1">−</button><i>2</i><button data-q="1">+</button></span><b class="price" data-unit="18">€36</b></li>
+        </ul>
+      </section>
+
+      <section class="panel" data-panel="2" hidden>
+        <h1>Shipping</h1>
+        <label>Full name<input value="Alice Chen"></label>
+        <label>Address<input value="12 Harbour Street"></label>
+        <div class="row"><label>City<input value="Lisbon"></label><label>Postcode<input value="1100-001"></label></div>
+        <fieldset>
+          <label class="opt"><input type="radio" name="ship" checked> Standard <span>Free · 3 to 5 days</span></label>
+          <label class="opt"><input type="radio" name="ship"> Express <span>€9 · tomorrow</span></label>
+        </fieldset>
+      </section>
+
+      <section class="panel" data-panel="3" hidden>
+        <h1>Payment</h1>
+        <label>Card number<input placeholder="1234 1234 1234 1234"></label>
+        <div class="row"><label>Expiry<input placeholder="MM / YY"></label><label>CVC<input placeholder="123"></label></div>
+        <p class="note">Prototype only: nothing is charged.</p>
+      </section>
+
+      <aside class="summary">
+        <h2>Summary</h2>
+        <p><span>Subtotal</span><b id="sub">€165</b></p>
+        <p><span>Shipping</span><b>Free</b></p>
+        <p class="total"><span>Total</span><b id="total">€165</b></p>
+        <button id="next" class="cta">Continue to shipping</button>
+        <button id="back" class="ghost" hidden>Back</button>
+      </aside>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

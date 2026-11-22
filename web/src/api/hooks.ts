@@ -83,6 +83,17 @@ export function useLinks(id: string | null, enabled = true) {
   return useQuery({ queryKey: ['links', id], enabled: !!id && enabled, queryFn: () => api.get_links({ node: id! }) });
 }
 
+/** A prototype's files and a signed preview link (valid an hour; refetched well before it expires). */
+export function usePrototype(id: string | null, mode?: 'published' | 'working') {
+  return useQuery({
+    queryKey: ['prototype', id, mode ?? null],
+    enabled: !!id,
+    staleTime: 20 * 60_000,
+    refetchInterval: 40 * 60_000,
+    queryFn: () => api.get_prototype({ prototype: id!, ...(mode ? { version: mode } : {}) }),
+  });
+}
+
 export function useGraph(enabled = true) {
   return useQuery({ queryKey: ['graph'], enabled, queryFn: () => api.get_graph({}) });
 }
@@ -132,7 +143,7 @@ export function useRulesSize(enabled = true) {
 
 /** Refresh everything that depends on document content or the tree after a mutation. */
 export function invalidateContent(): void {
-  for (const k of ['children', 'node', 'chain', 'skill', 'links', 'graph', 'versions', 'draft', 'warnings', 'rulesSize', 'grants', 'access', 'audit', 'trash', 'search', 'diff']) {
+  for (const k of ['children', 'node', 'chain', 'skill', 'links', 'graph', 'versions', 'draft', 'warnings', 'rulesSize', 'grants', 'access', 'audit', 'trash', 'search', 'diff', 'prototype']) {
     void qc.invalidateQueries({ queryKey: [k] });
   }
 }
