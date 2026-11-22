@@ -687,6 +687,40 @@ table.t .num{font-variant-numeric:tabular-nums;color:var(--muted);white-space:no
   .m-app .t td[style*="width:160px"]{width:auto!important}
   .m-app .urlbox{min-width:0;background:var(--m-card);border-color:transparent;height:44px}
 }
+/* setup guide */
+.guide{border:1px solid var(--border);border-radius:14px;background:var(--bg);padding:18px 20px;margin-bottom:22px}
+.guide h2{font-size:17px;margin:0 0 4px}
+.g-head{display:flex;gap:12px;align-items:flex-start}.g-head .muted{font-size:13px;max-width:560px}
+.g-got{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 16px}
+.g-clients{display:flex;gap:6px;flex-wrap:wrap}
+.g-clients button{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px 0 7px;border:1px solid var(--border-2);border-radius:10px;background:var(--panel);color:var(--fg);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.g-clients button.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.g-ok{color:var(--ok);display:inline-flex}
+.g-sub{font-size:12.5px;margin:8px 2px 4px}
+.g-steps{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:12px;max-width:640px}
+.g-steps li{display:flex;gap:12px;align-items:flex-start}
+.g-n{width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:12px;font-weight:600;flex:none;margin-top:1px}
+.g-alt .g-n{background:var(--sunken);color:var(--muted)}.g-alt .g-b{color:var(--fg-2);font-size:13px}
+.g-b{flex:1;min-width:0;font-size:13.5px;line-height:1.5}.g-b code{font-size:12px}
+.g-b .urlbox{min-width:0}.g-b .urlbox span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-try{display:flex;align-items:center;gap:6px;margin-top:8px;padding:6px 4px 6px 12px;border-radius:9px;background:var(--accent-soft);color:var(--accent);font-size:13px}.g-try span{flex:1}
+.g-foot{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.rail .ib{position:relative}.rdot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--panel)}
+/* usage */
+.ustats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.ustats>div{border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--bg);display:flex;flex-direction:column;gap:2px}
+.ustats b{font-size:22px;font-weight:600}.ustats small{font-size:13px;color:var(--muted);font-weight:500}.ustats span{font-size:12px;color:var(--muted)}
+.ustats .warn b{color:var(--warn)}
+.ut th.sortable{cursor:pointer;user-select:none}.ut th.sortable:hover{color:var(--fg)}
+.ut th{white-space:nowrap}.ut .sdir{display:inline-block;margin-left:3px;vertical-align:-1px}.ut .sdir.up{transform:rotate(180deg)}
+.ut tr.click{cursor:pointer}.ut tr.click:hover td{background:var(--hover,var(--sunken))}
+.ut td.num b{font-weight:600;font-variant-numeric:tabular-nums}
+.ubar{display:inline-block;width:56px;height:6px;border-radius:3px;background:var(--sunken);margin-right:8px;vertical-align:middle;overflow:hidden}.ubar span{display:block;height:100%;background:var(--accent);border-radius:3px}
+.spark{display:block}.spark rect{fill:var(--accent)}.spark rect.z{fill:var(--border-2)}
+.m-row .spark{flex:none}
+.gtop .gu{pointer-events:auto}.gtop .gu.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+@media (max-width:860px){.ustats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.guide.mob{background:var(--m-card,var(--bg));border:0;padding:16px}
 </style>
 
 <div id="root"></div>
@@ -1626,7 +1660,7 @@ function render(){const keep=snap();if(S.editing)syncEditor();acClose();const ro
  if(mob){if(S._m.key!==mPrev){const sc=$('#mscroll');if(sc)sc.scrollTop=S._m.anim==='pop'?(S._mScroll[S._m.key]||0):0}mAfter()}if(S.focusNext){const f=$(S.focusNext);S.focusNext=null;if(f){f.focus();if(f.select&&f.dataset.selectAll!==undefined)f.select()}}}
 function snap(){const a=document.activeElement;const o={id:a&&a.id,ss:null,se:null,sc:{}};try{o.ss=a.selectionStart;o.se=a.selectionEnd}catch(e){}for(const s of ['.main','.tree-body','.drawer-body','.modal-body','.pal-list','#mscroll'])o.sc[s]=$(s)?.scrollTop;return o}
 function restore(o){for(const s in o.sc){const e=$(s);if(e&&o.sc[s]!=null)e.scrollTop=o.sc[s]}if(o.id&&o.id!=='ed-body'){const e=document.getElementById(o.id);if(e){e.focus({preventScroll:true});try{if(o.ss!=null)e.setSelectionRange(o.ss,o.se)}catch(x){}}}}
-function shellHtml(){const pm=['people','teams','team','audit','tokens','connections','graph'].includes(S.view);const n=N(S.sel);const showDrawer=!pm&&S.drawer&&n&&canRead(n.id)&&S.view==='files';
+function shellHtml(){const pm=['people','teams','team','audit','usage','tokens','connections','graph'].includes(S.view);const n=N(S.sel);const showDrawer=!pm&&S.drawer&&n&&canRead(n.id)&&S.view==='files';
  return `<div class="shell ${showDrawer?'with-drawer':''} ${pm?'page-mode':''} ${S.mTree?'m-tree':''}">${topHtml()}${railHtml()}<aside class="tree" aria-label="Folders">${treePane()}</aside><main class="main" id="main">${mainHtml()}</main><aside class="drawer" aria-label="Details">${showDrawer?drawerHtml():''}</aside><div class="scrim" data-a="scrim"></div></div>${menuHtml()}${modalHtml()}`}
 function topHtml(){const u=me();return `<header class="top">
  <button class="ib mbtn" data-a="m-tree" aria-label="Folders">${ic('menu',18)}</button>
@@ -1638,7 +1672,7 @@ function topHtml(){const u=me();return `<header class="top">
   <button class="ib" data-a="menu" data-m="user" aria-label="Account" data-tip="${esc(u.name)}" style="width:auto;padding:0 4px">${av(u.id,28)}</button>
  </div></header>`}
 function railHtml(){const o=isOwner();const it=(v,icon,tip)=>`<button class="ib ${S.view===v||(v==='teams'&&S.view==='team')?'on':''}" data-a="go" data-v="${v}" aria-label="${tip}" data-tip="${tip}">${ic(icon,19)}</button>`;
- return `<nav class="rail">${it('files','layers','Library')}${it('graph','graph','Graph')}${o?it('people','user','People')+it('teams','users','Teams')+it('audit','activity','Audit'):''}<div class="sp"></div>${it('tokens','key','API tokens')}${it('connections','plug','Connections')}<button class="ib" data-a="theme" aria-label="Theme" data-tip="Theme">${ic(isDark()?'sun':'moon',18)}</button></nav>`}
+ return `<nav class="rail">${it('files','layers','Library')}${it('graph','graph','Graph')}${o?it('people','user','People')+it('teams','users','Teams')+it('audit','activity','Audit')+it('usage','chart','Usage'):''}<div class="sp"></div>${it('tokens','key','API tokens')}${it('connections','plug','Connections').replace('</button>',S.guide&&S.view!=='connections'?'<span class="rdot"></span></button>':'</button>')}<button class="ib" data-a="theme" aria-label="Theme" data-tip="Theme">${ic(isDark()?'sun':'moon',18)}</button></nav>`}
 function treePane(){const hasTrash=DB.nodes.some(n=>n.deleted&&role(n.id)>=4);
  return `<div class="tree-head"><span class="lbl">Library</span><button class="ib xs" data-a="go" data-v="graph" aria-label="Graph" data-tip="Graph">${ic('graph',15)}</button><button class="ib xs" data-a="collapse" aria-label="Collapse all" data-tip="Collapse all">${ic('chev-d',15)}</button></div>
  <div class="tree-body" id="tree-body" data-drop-root="1">${treeRows(roots(),0)||`<div class="empty" style="padding:40px 0">${ic('folder',20)}</div>`}</div>
@@ -1668,7 +1702,7 @@ function searchResHtml(){const r=searchAll(S.q);const items=[...r.skills.map(s=>
  return `<div class="sres" role="listbox">${items.map((it,i)=>`<button class="sr ${i===S.sIdx?'on':''}" data-a="go-node" data-id="${it.id}" role="option">${it.html}</button>`).join('')}</div>`}
 
 /* ---------- main views ---------- */
-function mainHtml(){switch(S.view){case 'people':return peopleHtml();case 'teams':return teamsHtml();case 'team':return teamHtml();case 'audit':return auditHtml();case 'tokens':return tokensHtml();case 'connections':return connsHtml();case 'trash':return trashHtml();case 'graph':return graphHtml()}const n=N(S.sel);if(!n||!canRead(n.id))return homeHtml();return n.kind==='doc'?docHtml(n):folderHtml(n)}
+function mainHtml(){switch(S.view){case 'people':return peopleHtml();case 'teams':return teamsHtml();case 'team':return teamHtml();case 'audit':return auditHtml();case 'usage':return usageHtml();case 'tokens':return tokensHtml();case 'connections':return connsHtml();case 'trash':return trashHtml();case 'graph':return graphHtml()}const n=N(S.sel);if(!n||!canRead(n.id))return homeHtml();return n.kind==='doc'?docHtml(n):folderHtml(n)}
 function crumbs(id){const p=visPath(id);return p.map((n,i)=>{const icn=isArea(n)?`<span class="ac-${n.area}">${ic(AREAS[n.area].icon,14)}</span>`:i===p.length-1?ic(nodeIcon(n),14):'';return i===p.length-1?`<span class="cur">${icn}${esc(n.name)}</span>`:`<button data-a="go-node" data-id="${n.id}">${icn}${esc(n.name)}</button>${ic('chev-r',12)}`}).join('')}
 function areaCount(k){const a=AREAS[k].id;if(k==='skills')return DB.nodes.filter(n=>n.kind==='folder'&&isSkill(n)&&isDesc(n.id,a)&&canRead(n.id)).length;return DB.nodes.filter(n=>n.kind==='doc'&&isDesc(n.id,a)&&canRead(n.id)).length}
 function homeHtml(){const r=roots();return `<div class="page"><div class="fhead"><span class="fic">${ic('layers',20)}</span><h1>Library</h1><div class="grow"></div><button class="btn" data-a="go" data-v="graph">${ic('graph',15)}<span>Graph</span></button></div><div class="tiles">${r.map(f=>{const k=f.area;const c=areaCount(k);return `<button class="tile a-${k}" data-a="go-node" data-id="${f.id}"><span class="fic">${ic(AREAS[k].icon,18)}</span><div><b>${esc(f.name)}</b><div class="muted" style="font-size:12.5px"><span class="num">${c}</span> · ${AREAS[k].tip}</div></div></button>`}).join('')}</div></div>`}
@@ -1818,7 +1852,8 @@ const gVis=o=>!!o&&G.f[o.area];
 /* area anchors; on a portrait screen they stack vertically so the layout fills the phone */
 const anch=k=>{const a=ANCH[k];return G.H>G.W*1.2?[a[1]*1.1,a[0]*1.1]:a};
 function graphHtml(){return `<div class="gwrap" id="gwrap"><canvas id="gc" aria-label="Link graph"></canvas>
- <div class="gtop"><div class="seg gseg" role="group" aria-label="Areas">${AREA_KEYS.map(a=>`<button class="${G.f[a]?'on':''} a-${a}" data-a="gf" data-v="${a}" aria-label="${AREAS[a].label}" aria-pressed="${G.f[a]}" data-tip="${AREAS[a].label}">${ic(AREAS[a].icon,15)}</button>`).join('')}</div><div class="qwrap gq">${ic('search',15)}<input class="input" id="gq" placeholder="Find" value="${esc(G.q)}" autocomplete="off" spellcheck="false" aria-label="Find in graph"></div></div>
+ <div class="gtop"><div class="seg gseg" role="group" aria-label="Areas">${AREA_KEYS.map(a=>`<button class="${G.f[a]?'on':''} a-${a}" data-a="gf" data-v="${a}" aria-label="${AREAS[a].label}" aria-pressed="${G.f[a]}" data-tip="${AREAS[a].label}">${ic(AREAS[a].icon,15)}</button>`).join('')}</div><div class="qwrap gq">${ic('search',15)}<input class="input" id="gq" placeholder="Find" value="${esc(G.q)}" autocomplete="off" spellcheck="false" aria-label="Find in graph"></div>
+ <button class="btn sm gu ${G.usage?'on':''}" data-a="g-usage" aria-pressed="${!!G.usage}" data-tip="Size by loads in the last 30 days, fade unused">${ic('chart',14)}<span>Usage</span></button></div>
  <div class="gzoom">${ib('gz-in','plus','Zoom in')}${ib('gz-out','minus','Zoom out')}${ib('gz-fit','maximize','Fit')}</div>
  <div class="glegend"><span data-tip="Link"><i class="gl"></i></span><span data-tip="Against the area rules"><i class="gl bad"></i>${ic('alert',11)}</span><span data-tip="Sub-skill"><i class="gl dash"></i>${ic('sparkles',11)}</span></div></div>`}
 function mountGraph(){const c=$('#gc');if(!c)return;sizeCanvas();const port=G.H>G.W*1.2;if(G.port!==undefined&&G.port!==port){G.pos.clear();G.fitted=false;G.touched=false}G.port=port;G.D=buildGraph();G.idx=new Map(G.D.nodes.map(o=>[o.id,o]));const r=rnd(7);let fresh=0;
@@ -1835,7 +1870,7 @@ function tick(){const ns=G.D.nodes.filter(gVis),k=G.alpha,n=ns.length;
  G.alpha*=.975}
 function sizeCanvas(){const c=$('#gc'),w=$('#gwrap');if(!c||!w)return;const r=w.getBoundingClientRect();const dpr=window.devicePixelRatio||1;G.W=Math.max(1,r.width);G.H=Math.max(1,r.height);G.dpr=dpr;c.width=Math.round(G.W*dpr);c.height=Math.round(G.H*dpr);c.style.width=G.W+'px';c.style.height=G.H+'px'}
 const toW=(sx,sy)=>[(sx-G.W/2-G.px)/G.zoom,(sy-G.H/2-G.py)/G.zoom];
-const gRad=o=>4.5+Math.sqrt(o.deg)*2.5;
+const gRad=o=>{if(G.usage&&o.area!=='rules'){const l=uLoads(o);return l==null?4.5:3.5+Math.sqrt(l)*1.5}return 4.5+Math.sqrt(o.deg)*2.5};
 function fit(){const ns=G.D.nodes.filter(gVis);if(!ns.length)return;let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const o of ns){x0=Math.min(x0,o.x);y0=Math.min(y0,o.y);x1=Math.max(x1,o.x);y1=Math.max(y1,o.y)}const pad=60,px=mobile()?75:60;G.zoom=Math.max(.25,Math.min(1.6,Math.min(G.W/(x1-x0+px*2),(G.H-50)/(y1-y0+pad*2))));G.px=-(x0+x1)/2*G.zoom;G.py=-(y0+y1)/2*G.zoom+16}
 function center(o){G.px=-o.x*G.zoom;G.py=-o.y*G.zoom}
 function zoomAt(sx,sy,z){G.touched=true;z=Math.max(.25,Math.min(4,z));const[wx,wy]=toW(sx,sy);G.zoom=z;G.px=sx-G.W/2-wx*z;G.py=sy-G.H/2-wy*z;draw()}
@@ -1852,7 +1887,7 @@ function draw(){const c=$('#gc');if(!c||!G.D)return;const x=c.getContext('2d');c
   x.beginPath();x.moveTo(a.x+ux*gRad(a),a.y+uy*gRad(a));x.lineTo(ex,ey);x.stroke();
   if(!e.contains&&(on||z>.7)){x.setLineDash([]);x.fillStyle=x.strokeStyle;const s=(on?6:4.5)/z;x.beginPath();x.moveTo(ex,ey);x.lineTo(ex-ux*s-uy*s*.55,ey-uy*s+ux*s*.55);x.lineTo(ex-ux*s+uy*s*.55,ey-uy*s-ux*s*.55);x.closePath();x.fill()}}
  x.setLineDash([]);
- for(const o of G.D.nodes){if(!gVis(o))continue;const dim=act&&!nb.has(o.id);x.globalAlpha=dim?.16:1;const r=gRad(o);
+ for(const o of G.D.nodes){if(!gVis(o))continue;const dim=act&&!nb.has(o.id);x.globalAlpha=dim?.16:(G.usage&&o.area!=='rules'&&!uLoads(o)?.25:1);const r=gRad(o);
   if(o===act){x.globalAlpha=.22;x.fillStyle=col[o.area];x.beginPath();x.arc(o.x,o.y,r+6/z,0,7);x.fill();x.globalAlpha=1}
   x.fillStyle=col[o.area];x.beginPath();x.arc(o.x,o.y,r,0,7);x.fill();x.lineWidth=2/z;x.strokeStyle=bg;x.stroke();
   if(o.kind==='folder'){x.fillStyle=bg;x.beginPath();x.arc(o.x,o.y,r*.38,0,7);x.fill()}}
@@ -1946,10 +1981,89 @@ function scopeChips(sc){return sc.map(s=>`<span class="chip ${s==='read'?'':s===
 function tokensHtml(){return `<div class="page wide"><div class="ph1"><h1>API tokens</h1><div class="grow"></div><button class="btn primary" data-a="mint-open">${ic('plus',15)}<span>Token</span></button></div>
  ${DB.tokens.length?`<div class="tw-scroll"><table class="t"><thead><tr><th>Name</th><th>Scopes</th><th>Last used</th><th>Expires</th><th></th></tr></thead><tbody>${DB.tokens.map(t=>`<tr><td><div class="row-flex">${ic('key',15)}<span style="font-weight:500">${esc(t.name)}</span></div></td><td>${scopeChips(t.scopes)}</td><td class="num">${t.used?ago(t.used):'-'}</td><td class="num">${t.exp?new Date(t.exp).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'Never'}</td><td style="width:44px"><button class="ib xs" data-a="revoke-token" data-id="${t.id}" data-confirm aria-label="Revoke" data-tip="Revoke">${ic('trash',14)}</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="empty"><span class="eic">${ic('key',22)}</span></div>`}</div>`}
 const CLIENT_C={Claude:'#c96442',ChatGPT:'#10a37f','Copilot Studio':'#6b5bd6'};
-function connsHtml(){return `<div class="page wide"><div class="ph1"><h1>Connections</h1><div class="grow"></div><button class="btn" data-a="consent-preview" data-tip="Preview consent screen">${ic('eye',15)}<span>Consent</span></button></div>
- <div class="connect"><span class="cic">${ic('plug',19)}</span><div style="min-width:0"><div style="font-weight:600">MCP server</div><div class="muted" style="font-size:12.5px">Claude, ChatGPT, Copilot Studio</div></div><div class="urlbox"><span id="mcp-url">https://skills.acme.com/mcp</span><button class="ib sm" data-a="copy" data-v="https://skills.acme.com/mcp" aria-label="Copy" data-tip="Copy">${ic('copy',15)}</button></div></div>
+function connsHtml(){return `<div class="page wide"><div class="ph1"><h1>Connections</h1><div class="grow"></div>${guideBtn()}<button class="btn" data-a="consent-preview" data-tip="Preview consent screen">${ic('eye',15)}<span>Consent</span></button></div>
+ ${S.guide?guideHtml():''}<div class="connect" ${S.guide?'hidden':''}><span class="cic">${ic('plug',19)}</span><div style="min-width:0"><div style="font-weight:600">MCP server</div><div class="muted" style="font-size:12.5px">Claude, ChatGPT, Copilot Studio</div></div><div class="urlbox"><span id="mcp-url">https://skills.acme.com/mcp</span><button class="ib sm" data-a="copy" data-v="https://skills.acme.com/mcp" aria-label="Copy" data-tip="Copy">${ic('copy',15)}</button></div></div>
  ${DB.conns.length?`<div class="tw-scroll"><table class="t"><thead><tr><th>Client</th><th>Scopes</th><th>Last used</th><th>Connected</th><th></th></tr></thead><tbody>${DB.conns.map(c=>`<tr><td><div class="row-flex"><span class="av sq" style="--s:28px;background:${CLIENT_C[c.client]||'var(--muted)'};color:#fff">${esc(c.client[0])}</span><span style="font-weight:500">${esc(c.client)}</span></div></td><td>${scopeChips(c.scopes)}</td><td class="num">${ago(c.used)}</td><td class="num">${ago(c.created)}</td><td style="width:44px"><button class="ib xs" data-a="revoke-conn" data-id="${c.id}" data-confirm aria-label="Revoke" data-tip="Revoke">${ic('trash',14)}</button></td></tr>`).join('')}</tbody></table></div>`:`<div class="empty"><span class="eic">${ic('plug',22)}</span></div>`}</div>`}
 function trashHtml(){const items=DB.nodes.filter(n=>n.deleted&&(!n.parent||alive(n.parent))&&role(n.id)>=4);return `<div class="page"><div class="ph1"><h1>${ic('trash',20)} Trash</h1></div>${items.length?`<div class="items">${items.map(n=>`<div class="item" style="grid-template-columns:20px minmax(0,1fr) auto 32px;cursor:default"><span class="faint">${ic(n.kind==='folder'?'folder':'file',17)}</span><div style="min-width:0"><div class="t ell">${esc(n.name)}</div><div class="d">${esc(pathOf(n.parent||''))}</div></div><span class="w">${ago(n.deleted)}</span><button class="ib xs" data-a="restore" data-id="${n.id}" aria-label="Restore" data-tip="Restore">${ic('undo',14)}</button></div>`).join('')}</div>`:`<div class="empty"><span class="eic">${ic('trash',22)}</span></div>`}</div>`}
+
+/* ---------- setup guide (first run, dismissable, replayable) ---------- */
+ICONS.chart='<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>';
+const MCP_URL='https://skills.acme.com/mcp';
+const LS={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
+S.guide=LS.get('sh-guide')!=='off';S.guideClient='Claude';S.usageF={kind:'all',range:30,attn:false,sort:'loads',dir:'desc'};
+const GUIDE={
+ Claude:{sub:'claude.ai, Claude Desktop or Claude Code',steps:['Open <b>Settings &rarr; Connectors</b>','<b>Add custom connector</b>, name it SkillHub and paste the URL','<b>Connect</b>, sign in with Microsoft, keep <code>read</code> and <code>write</code> ticked'],cli:'claude mcp add --transport http skillhub '+MCP_URL},
+ ChatGPT:{sub:'Your workspace admin may need to allow custom connectors first',steps:['Open <b>Settings &rarr; Apps &amp; Connectors &rarr; Advanced</b> and turn on developer mode if asked','<b>Create</b> a connector, paste the URL, authentication <b>OAuth</b>','<b>Connect</b>, sign in with Microsoft, keep <code>read</code> and <code>write</code> ticked']},
+ 'Copilot Studio':{sub:'Set up once per agent by whoever builds it',steps:['In your agent: <b>Tools &rarr; Add a tool &rarr; New tool &rarr; Model Context Protocol</b>','Paste the URL, authentication <b>OAuth 2.0</b>, type <b>Dynamic discovery</b>','Sign in with Microsoft and choose the scopes the agent needs']}};
+const TRY_PROMPT='What skills do we have for code review?';
+function libCounts(){const pub=a=>DB.nodes.filter(n=>n.kind==='doc'&&n.published&&alive(n.id)&&canRead(n.id)&&isDesc(n.id,a)&&!isCode(n));
+ return{rules:pub('A_rules').length,skills:DB.nodes.filter(n=>n.kind==='folder'&&alive(n.id)&&isSkill(n)&&canRead(n.id)&&skillMdOf(n).published).length,docs:pub('A_docs').length}}
+function guideHtml(mob){const c=S.guideClient,g=GUIDE[c],conn=DB.conns.find(x=>x.client===c),k=libCounts();let n=1;
+ const step=(body)=>`<li><span class="g-n">${n++}</span><div class="g-b">${body}</div></li>`;
+ return `<section class="guide ${mob?'mob':''}" aria-label="Setup guide">
+ <div class="g-head"><div class="grow"><h2>Connect your agent</h2><div class="muted">Do this once. After that, every chat starts with the team's rules, and the agent loads skills and docs when it needs them.</div></div><button class="ib sm" data-a="guide-off" aria-label="Dismiss setup guide" data-tip="Dismiss">${ic('x',16)}</button></div>
+ <div class="g-got"><span class="chip"><span class="ac-rules" style="display:inline-flex">${ic('scroll',13)}</span>${k.rules} rules, always on</span><span class="chip"><span class="ac-skills" style="display:inline-flex">${ic('sparkles',13)}</span>${k.skills} skills</span><span class="chip"><span class="ac-docs" style="display:inline-flex">${ic('book',13)}</span>${k.docs} docs</span></div>
+ <div class="g-clients" role="tablist" aria-label="Client">${Object.keys(GUIDE).map(x=>`<button role="tab" aria-selected="${x===c}" class="${x===c?'on':''}" data-a="guide-client" data-v="${esc(x)}"><span class="av sq" style="--s:22px;background:${CLIENT_C[x]};color:#fff">${esc(x[0])}</span><span>${esc(x)}</span>${DB.conns.some(y=>y.client===x)?`<span class="g-ok" aria-label="Connected">${ic('check',12)}</span>`:''}</button>`).join('')}</div>
+ <div class="muted g-sub">${esc(g.sub)}</div>
+ <ol class="g-steps">
+  ${step(`Copy the connector URL<div class="urlbox" style="margin-top:8px"><span>${MCP_URL}</span><button class="ib sm" data-a="copy" data-v="${MCP_URL}" aria-label="Copy URL" data-tip="Copy">${ic('copy',15)}</button></div>`)}
+  ${g.steps.map(s=>step(s)).join('')}
+  ${g.cli?`<li class="g-alt"><span class="g-n">${ic('terminal',12)}</span><div class="g-b">Claude Code instead: run this, then <code>/mcp</code> to sign in<div class="urlbox" style="margin-top:8px"><span>${esc(g.cli)}</span><button class="ib sm" data-a="copy" data-v="${esc(g.cli)}" aria-label="Copy command" data-tip="Copy">${ic('copy',15)}</button></div></div></li>`:''}
+  ${step(`Try it in a new chat<div class="g-try"><span>&ldquo;${esc(TRY_PROMPT)}&rdquo;</span><button class="ib sm" data-a="copy" data-v="${esc(TRY_PROMPT)}" aria-label="Copy prompt" data-tip="Copy">${ic('copy',15)}</button></div>`)}
+ </ol>
+ <div class="g-foot">${conn?`<span class="chip ok">${ic('check',12)}${esc(c)} connected ${ago(conn.used)} ago</span>`:`<span class="muted" style="font-size:12.5px">${ic('clock',13)} Waiting for ${esc(c)} to connect</span>`}<div class="grow"></div><button class="btn sm" data-a="guide-off">Done</button></div>
+ </section>`}
+const guideBtn=()=>S.guide?'':`<button class="btn" data-a="guide-on" data-tip="Show the setup guide again">${ic('info',15)}<span>Setup guide</span></button>`;
+
+/* ---------- usage: which skills and docs agents actually load ---------- */
+/* Prototype data. Real version: daily rollup per node from audit_log (get_skill, get_node loads)
+   plus a new "shown" count from the results find_skills and search return. */
+const UDAYS=30;
+const UPROFILE={s_cr:[9,1.6],s_dep:[6,1.8],s_rb:[2,2],s_can:[.4,3],s_ir:[3,1.5],s_rot:[.3,2.5],s_sql:[4,1.7],s_disc:[3,1.8],s_price:[.15,40],s_auth:[1,2],s_prom:[0,0],s_acc:[.5,2.2],
+ x_onb:[2,1.4],x_wri:[1.5,1.6],x_glo:[.8,2],x_arch:[3,1.5],x_env:[2.5,1.6],x_oc:[1,1.8],x_test:[0,.6],x_ff:[.3,2],x_rb:[0,0],x_auth:[1,1.7],x_bill:[.6,0],x_wh:[2,1.6],x_dbt:[1.2,1.8],x_pii:[.4,2.4],x_sec:[.2,3],x_icp:[1,1.6],x_price:[2,1.5]};
+const USAGE=(function(){const r=rnd(99),out=new Map();
+ for(const id in UPROFILE){const[w,sx]=UPROFILE[id];const n=N(id);if(!n)continue;const days=[],shown=[];
+  for(let i=0;i<UDAYS;i++){const dow=new Date(T0-(UDAYS-1-i)*DAY).getDay();const wk=dow===0||dow===6?.15:1;const trend=.6+.8*i/UDAYS;
+   const l=w?Math.max(0,Math.round(w*wk*trend*(.3+r()*1.4))):0;days.push(l);shown.push(Math.round(l*sx+(sx>5||(w===0&&sx>0)?r()*2*wk:0)))}
+  out.set(id,{days,shown})}return out})();
+function uStats(id,range){const u=USAGE.get(id);if(!u)return null;const d=u.days.slice(-range),s=u.shown.slice(-range);const loads=d.reduce((a,b)=>a+b,0),shown=s.reduce((a,b)=>a+b,0);
+ let last=-1;for(let i=u.days.length-1;i>=0;i--)if(u.days[i]){last=i;break}
+ return{days:d,loads,shown:Math.max(shown,loads),people:loads?Math.min(7,Math.ceil(Math.sqrt(loads)*.6)):0,last:last<0?null:T0-(UDAYS-1-last)*DAY+9*HR}}
+function inbound(id){const D=G.D||buildGraph();return D.edges.filter(e=>e.t===id&&!e.contains).length}
+function uNotes(st,id,kind){const out=[];
+ if(!st.loads&&!st.shown)out.push(['bad','Never found','Not returned by any search in this period. The name or description may not match how people ask.']);
+ else if(!st.loads)out.push(['warn','Shown, never opened',`Came back in results ${st.shown} times, never loaded. The description may not say when to use it.`]);
+ else if(st.shown>=12&&st.loads/st.shown<.15)out.push(['warn','Rarely picked',`Shown ${st.shown} times, loaded ${st.loads}. Agents usually choose something else.`]);
+ if(kind==='docs'&&!inbound(id))out.push(['','No links in','Nothing links here, so agents only reach it through search.']);
+ return out}
+function uRows(){const F=S.usageF;const rows=[];
+ for(const id of USAGE.keys()){const n=N(id);if(!n||!alive(n.id)||!canRead(n.id))continue;const kind=n.kind==='folder'?'skills':'docs';if(F.kind!=='all'&&F.kind!==kind)continue;
+  const st=uStats(id,F.range);const notes=uNotes(st,id,kind);if(F.attn&&!notes.some(x=>x[0]))continue;
+  rows.push({id,n,kind,st,notes,label:n.name,path:visPathStr(n.parent)})}
+ const k=F.sort,dir=F.dir;rows.sort((a,b)=>{const v=k==='name'?a.label.localeCompare(b.label):k==='last'?(a.st.last||0)-(b.st.last||0):a.st[k]-b.st[k];return(dir==='asc'?v:-v)||a.label.localeCompare(b.label)});return rows}
+function spark(days,w=120,h=24){const max=Math.max(1,...days);const bw=w/days.length;
+ return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">${days.map((d,i)=>{const bh=d?Math.max(2,d/max*(h-2)):1;return `<rect x="${(i*bw+.5).toFixed(1)}" y="${(h-bh).toFixed(1)}" width="${Math.max(1,bw-1.2).toFixed(1)}" height="${bh.toFixed(1)}" rx="1" class="${d?'':'z'}"/>`}).join('')}</svg>`}
+function noteChips(notes){return notes.map(([t,l,tip])=>`<span class="chip ${t}" data-tip="${esc(tip)}">${l}</span>`).join(' ')}
+function usageSummary(){const F=S.usageF;let loads=0,used=0,total=0,lost=0;for(const id of USAGE.keys()){const n=N(id);if(!n||!canRead(n.id))continue;const st=uStats(id,F.range);total++;loads+=st.loads;if(st.loads)used++;if(!st.loads)lost++}
+ return `<div class="ustats"><div><b class="num">${loads}</b><span>loads</span></div><div><b class="num">${used}<small>/${total}</small></b><span>skills and docs used</span></div><div><b class="num">${Math.min(7,DB.users.filter(u=>u.status==='active').length)}</b><span>people with an agent connected</span></div><div class="${lost?'warn':''}"><b class="num">${lost}</b><span>not loaded once</span></div></div>`}
+function usageBar(mob){const F=S.usageF;return `<div class="${mob?'m-pad row-flex':'bar'}" style="flex-wrap:wrap">
+ <div class="seg" role="group" aria-label="Kind">${[['all','All'],['skills','Skills'],['docs','Docs']].map(([v,l])=>`<button class="${F.kind===v?'on':''}" data-a="u-kind" data-v="${v}">${l}</button>`).join('')}</div>
+ <div class="seg" role="group" aria-label="Range">${[7,30].map(v=>`<button class="${F.range===v?'on':''}" data-a="u-range" data-v="${v}">${v}d</button>`).join('')}</div>
+ <button class="btn ${mob?'':'sm'} ${F.attn?'on':''}" data-a="u-attn" aria-pressed="${F.attn}">${ic('alert',14)}<span>Needs a look</span></button>
+ ${mob?'':`<div class="grow"></div><button class="btn sm" data-a="graph-usage">${ic('graph',14)}<span>See on graph</span></button>`}</div>`}
+function usageHtml(){const F=S.usageF;const rows=uRows();const max=Math.max(1,...rows.map(r=>r.st.loads));
+ const th=(k,l,tip)=>`<th class="${k?'sortable':''}" ${k?`data-a="u-sort" data-v="${k}"`:''} ${tip?`data-tip="${esc(tip)}"`:''}>${l}${F.sort===k?ic('chev-d',11,'sdir '+(F.dir==='asc'?'up':'')):''}</th>`;
+ return `<div class="page wide"><div class="ph1"><h1>Usage</h1><div class="grow"></div></div>
+ ${usageSummary()}${usageBar()}
+ <div class="tw-scroll"><table class="t ut"><thead><tr>${th('name','Skill or doc')}${th('loads','Loads')}${th('people','People')}<th>Last ${F.range} days</th>${th('shown','Shown','Times it came back from find_skills or search')}${th('last','Last loaded')}<th></th></tr></thead><tbody>
+ ${rows.map(r=>`<tr class="click" data-a="go-node" data-id="${navId(r.n)}"><td><div class="row-flex"><span class="ac-${r.kind}">${ic(r.kind==='skills'?'sparkles':'file',15)}</span><div style="min-width:0"><div class="ell" style="font-weight:500">${esc(r.label)}</div><div class="faint ell" style="font-size:11.5px">${esc(r.path)}</div></div></div></td>
+ <td class="num"><div class="ubar"><span style="width:${(r.st.loads/max*100).toFixed(1)}%"></span></div><b>${r.st.loads}</b></td><td class="num">${r.st.people||'<span class="faint">0</span>'}</td><td>${spark(r.st.days,F.range===7?70:120)}</td>
+ <td class="num">${r.st.shown?`${r.st.shown} <span class="faint">&rarr; ${r.st.loads}</span>`:'<span class="faint">0</span>'}</td><td class="num">${r.st.last?ago(r.st.last):'<span class="faint">never</span>'}</td><td>${noteChips(r.notes)}</td></tr>`).join('')||`<tr><td colspan="7"><div class="empty" style="padding:30px 0">${ic('check',20)}<span>Nothing to look at</span></div></td></tr>`}
+ </tbody></table></div>
+ <div class="faint" style="font-size:12px;margin-top:10px">Rules aren&rsquo;t listed: every agent gets them when it connects.</div></div>`}
+function mUsage(){const F=S.usageF;const rows=uRows();
+ return `<div class="m-pad">${usageSummary()}</div>${usageBar(true)}<div class="m-group">${rows.map(r=>`<button class="m-row" data-a="go-node" data-id="${navId(r.n)}"><span class="m-ic sm a-${r.kind}" style="--ac:var(--c-${r.kind})">${ic(r.kind==='skills'?'sparkles':'file',16)}</span><span class="m-tx"><span class="m-t">${esc(r.label)}</span><span class="m-s">${r.st.loads} loads &middot; ${r.st.people} people${r.notes.length?` &middot; ${r.notes.map(x=>x[1]).join(', ')}`:''}</span></span>${spark(r.st.days,F.range===7?44:72,22)}</button>`).join('')||`<div class="empty">${ic('check',22)}</div>`}</div>`}
+const uLoads=o=>{const st=uStats(o.id,30);return st?st.loads:null};
 
 /* ---------- screens ---------- */
 const MS=`<svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>`;
@@ -2131,6 +2245,15 @@ function act(a,ds,e,el,prevMenu){const d=N(S.sel);
  case 'skill-publish':{const sk=N(ds.id);S.modal=null;publishSkill(sk);render();return}
  case 'copy-path':{S.menu=null;render();return copy('[['+canon(ds.id||S.sel)+']]')}
  case 'wl-insert':{const ta=$('#ed-raw');if(ta){ta.focus();document.execCommand('insertText',false,'[[');S.edit.body=ta.value}else{const b=$('#ed-body');b.focus();document.execCommand('insertText',false,'[[');S.edit.dirty=true}setTimeout(acCheck,0);return}
+ case 'guide-off':S.guide=false;LS.set('sh-guide','off');render();return;
+ case 'guide-on':S.guide=true;LS.set('sh-guide',null);render();return;
+ case 'guide-client':S.guideClient=ds.v;render();return;
+ case 'u-kind':S.usageF.kind=ds.v;render();return;
+ case 'u-range':S.usageF.range=+ds.v;render();return;
+ case 'u-attn':S.usageF.attn=!S.usageF.attn;render();return;
+ case 'u-sort':{const F=S.usageF;if(F.sort===ds.v)F.dir=F.dir==='asc'?'desc':'asc';else{F.sort=ds.v;F.dir=ds.v==='name'?'asc':'desc'}render();return}
+ case 'g-usage':G.usage=!G.usage;render();return;
+ case 'graph-usage':G.usage=true;go('graph');return;
  case 'gf':{const k=ds.v;const on=AREA_KEYS.filter(a=>G.f[a]);if(G.f[k]&&on.length===1)return;G.f[k]=!G.f[k];G.alpha=Math.max(G.alpha,.35);render();return}
  case 'gz-in':return zoomAt(G.W/2,G.H/2,G.zoom*1.3);
  case 'gz-out':return zoomAt(G.W/2,G.H/2,G.zoom/1.3);
@@ -2181,7 +2304,7 @@ function act(a,ds,e,el,prevMenu){const d=N(S.sel);
 /* ---------- iPhone layout (< 768 px) ---------- */
 /* tab bar + one push stack per tab; the stack is derived from state, back is computed, never history.back() */
 const MQ=window.matchMedia('(max-width:767px)');function mobile(){return MQ.matches}
-const MORE_VIEWS=['more','people','teams','team','audit','tokens','connections','trash'];
+const MORE_VIEWS=['more','people','teams','team','audit','usage','tokens','connections','trash'];
 function mTab(){return S.view==='search'?'search':S.view==='graph'?'graph':MORE_VIEWS.includes(S.view)?'more':'home'}
 /* back target: files of a skill go back to its SKILL.md, a SKILL.md goes back to the folder holding the skill */
 function mBack(id){const n=N(id);if(!n)return null;const sk=skillOf(id);if(sk&&!(isSkillMd(n)&&n.parent===sk.id))return skillMdOf(sk).id;
@@ -2242,13 +2365,14 @@ function mMoreScreen(anim){const v=S.view;const back=v!=='more';
  if(v==='people')return mScreen({anim,back,title:'People',body:mPeople()});
  if(v==='teams')return mScreen({anim,back,title:'Teams',right:mb('new-team','plus','New team'),body:mTeams()});
  if(v==='team'){const t=T(S.teamId);if(!t){S.view='teams';return mMoreScreen(anim)}return mScreen({anim,back,title:esc(t.id==='everyone'?'Everyone':t.name),body:teamHtml(true)})}
+ if(v==='usage')return mScreen({anim,back,title:'Usage',body:mUsage()});
  if(v==='audit')return mScreen({anim,back,title:'Audit',right:mb('csv','download','CSV'),body:mAudit()});
  if(v==='tokens')return mScreen({anim,back,title:'API tokens',right:mb('mint-open','plus','New token'),body:mTokens()});
  if(v==='connections')return mScreen({anim,back,title:'Connections',right:mb('consent-preview','eye','Preview consent screen'),body:mConns()});
  if(v==='trash')return mScreen({anim,back,title:'Trash',body:mTrash()});
  const u=me();const o=isOwner();const hasTrash=DB.nodes.some(n=>n.deleted&&role(n.id)>=4);
  return mScreen({anim,title:'Account',body:`<div class="m-group"><div class="m-row static">${av(u.id,48)}<span class="m-tx"><span class="m-t" style="font-weight:600">${esc(u.name)}</span><span class="m-s">${esc(u.email)}</span></span></div></div>
- ${o?`<div class="m-group">${mNavRow('go','user','#007aff','People','data-v="people"')}${mNavRow('go','users','#5856d6','Teams','data-v="teams"')}${mNavRow('go','activity','#ff9500','Audit','data-v="audit"')}</div>`:''}
+ ${o?`<div class="m-group">${mNavRow('go','user','#007aff','People','data-v="people"')}${mNavRow('go','users','#5856d6','Teams','data-v="teams"')}${mNavRow('go','activity','#ff9500','Audit','data-v="audit"')}${mNavRow('go','chart','#007aff','Usage','data-v="usage"')}</div>`:''}
  <div class="m-group">${mNavRow('go','key','#8e8e93','API tokens','data-v="tokens"')}${mNavRow('go','plug','#34c759','Connections','data-v="connections"')}${hasTrash?mNavRow('go','trash','#8e8e93','Trash','data-v="trash"'):''}</div>
  <div class="m-group"><label class="m-row"><span class="m-ic sm" style="--ac:#5856d6">${ic('moon',16)}</span><span class="m-tx"><span class="m-t">Dark</span></span><span class="switch"><input type="checkbox" data-ch="m-theme" ${isDark()?'checked':''} aria-label="Dark mode"><span></span></span></label>${mNavRow('menu','flask','#af52de','Prototype','data-m="dev"')}</div>
  <div class="m-group"><button class="m-row m-danger" data-a="logout" aria-label="Sign out">${ic('logout',18)}</button></div>`})}
@@ -2260,7 +2384,7 @@ function mAudit(){const F=S.auditF;const rows=auditRows().slice(0,80);
  return `<div class="m-pad row-flex" style="flex-wrap:wrap"><div class="seg" role="group" aria-label="Source">${[['','All'],['ui','Web'],['rest','API'],['mcp','Agent']].map(([v,l])=>`<button class="${F.via===v?'on':''}" data-a="audit-via" data-v="${v}" aria-label="${l}">${v?ic(VIA[v][0],15):ic('layers',15)}</button>`).join('')}</div><div class="seg">${['24h','7d','30d','all'].map(r=>`<button class="${F.range===r?'on':''}" data-a="audit-range" data-v="${r}">${r==='all'?ic('clock',15):r}</button>`).join('')}</div></div>
  <div class="m-group">${rows.map(a=>`<div class="m-row static"><span class="m-ic sm ${a.ok?(a.op==='publish_version'?'ok':a.op==='commit_version'?'acc':'plain'):'bad'}">${ic(a.ok?OPI[a.op]||'activity':'ban',15)}</span><span class="m-tx"><span class="m-t" style="font-size:15px">${esc(U(a.actor)?.name.split(' ')[0]||'System')} <span class="muted">${OPL[a.op]||a.op}${a.v?' v'+a.v:''}</span></span><span class="m-s">${a.node&&N(a.node)?esc(pathOf(a.node)):esc(a.detail||'')}</span></span><span class="m-v" style="font-size:13px">${ago(a.ts)}</span></div>`).join('')||`<div class="empty">${ic('activity',22)}</div>`}</div>`}
 function mTokens(){return DB.tokens.length?`<div class="m-group">${DB.tokens.map(t=>`<div class="m-sw"><div class="m-acts"><button class="sa sa-del" data-a="revoke-token" data-id="${t.id}" aria-label="Revoke">${ic('trash',20)}</button></div><button class="m-row" data-a="menu" data-m="acts" data-id="token:${t.id}"><span class="m-ic sm plain">${ic('key',16)}</span><span class="m-tx"><span class="m-t">${esc(t.name)}</span><span class="m-s">${t.scopes.join(' · ')}</span></span><span class="m-v" style="font-size:13px">${t.used?ago(t.used):'-'}</span></button></div>`).join('')}</div>`:`<div class="empty"><span class="eic">${ic('key',22)}</span></div>`}
-function mConns(){return `<div class="m-pad"><div class="urlbox"><span>https://skills.acme.com/mcp</span><button class="ib sm" data-a="copy" data-v="https://skills.acme.com/mcp" aria-label="Copy">${ic('copy',16)}</button></div></div>${DB.conns.length?`<div class="m-group">${DB.conns.map(c=>`<div class="m-sw"><div class="m-acts"><button class="sa sa-del" data-a="revoke-conn" data-id="${c.id}" aria-label="Revoke">${ic('trash',20)}</button></div><button class="m-row" data-a="menu" data-m="acts" data-id="conn:${c.id}"><span class="m-ic sm" style="--ac:${CLIENT_C[c.client]||'var(--muted)'}">${esc(c.client[0])}</span><span class="m-tx"><span class="m-t">${esc(c.client)}</span><span class="m-s">${c.scopes.join(' · ')}</span></span><span class="m-v" style="font-size:13px">${ago(c.used)}</span></button></div>`).join('')}</div>`:''}`}
+function mConns(){return `${S.guide?`<div class="m-pad">${guideHtml(true)}</div>`:`<div class="m-pad"><button class="btn" data-a="guide-on" style="width:100%;justify-content:center">${ic('info',15)}<span>Setup guide</span></button></div>`}<div class="m-pad"><div class="urlbox"><span>https://skills.acme.com/mcp</span><button class="ib sm" data-a="copy" data-v="https://skills.acme.com/mcp" aria-label="Copy">${ic('copy',16)}</button></div></div>${DB.conns.length?`<div class="m-group">${DB.conns.map(c=>`<div class="m-sw"><div class="m-acts"><button class="sa sa-del" data-a="revoke-conn" data-id="${c.id}" aria-label="Revoke">${ic('trash',20)}</button></div><button class="m-row" data-a="menu" data-m="acts" data-id="conn:${c.id}"><span class="m-ic sm" style="--ac:${CLIENT_C[c.client]||'var(--muted)'}">${esc(c.client[0])}</span><span class="m-tx"><span class="m-t">${esc(c.client)}</span><span class="m-s">${c.scopes.join(' · ')}</span></span><span class="m-v" style="font-size:13px">${ago(c.used)}</span></button></div>`).join('')}</div>`:''}`}
 function mTrash(){const items=DB.nodes.filter(n=>n.deleted&&(!n.parent||alive(n.parent))&&role(n.id)>=4);return items.length?`<div class="m-group">${items.map(n=>`<div class="m-sw"><div class="m-acts"><button class="sa sa-share" data-a="restore" data-id="${n.id}" aria-label="Restore">${ic('undo',20)}</button></div><button class="m-row" data-a="menu" data-m="acts" data-id="trash:${n.id}"><span class="m-ic sm plain">${ic(n.kind==='folder'?'folder':'file',16)}</span><span class="m-tx"><span class="m-t">${esc(n.name)}</span><span class="m-s">${esc(pathOf(n.parent||''))}</span></span><span class="m-v" style="font-size:13px">${ago(n.deleted)}</span></button></div>`).join('')}</div>`:`<div class="empty"><span class="eic">${ic('trash',22)}</span></div>`}
 /* gestures: row swipe actions, long press menus, leading-edge swipe back, sheet drag with detents */
 const GS={t:null,lpT:0};let suppressClick=false,supT=0;function supClick(){suppressClick=true;clearTimeout(supT);supT=setTimeout(()=>{suppressClick=false},400)}
