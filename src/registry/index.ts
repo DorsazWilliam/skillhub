@@ -8,6 +8,7 @@ import { findSkillsOp, search } from './search';
 import { getLinks, getGraph } from './links';
 import { publishSkill, getRulesSize } from './skills';
 import { getWarnings, dismissWarning, restoreWarnings } from './warnings';
+import { getUsage } from './usage';
 import {
   listUsers,
   setUserRole,
@@ -85,6 +86,7 @@ export const OPS: AnyOp[] = [
   removeTeamMember,
   listTeamAccess,
   listAudit,
+  getUsage,
   exportTree,
   getSettings,
 ];

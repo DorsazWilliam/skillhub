@@ -133,6 +133,8 @@ export const getSkill = defineOp({
       const skills = await tree.skillSet(chain);
       skillId = [...chain].reverse().find((id) => skills.has(id)) ?? null;
     }
+    // A read of a skill or any file in it counts for the skill. Drafts and old versions are authoring, not use.
+    if (version !== null && version === doc.published_version) ctx.usage.load = skillId ?? doc.id;
     return {
       id: doc.id,
       skill_id: skillId,

@@ -36,6 +36,8 @@ They connect through canonical `[[area/path]]` links: rules point to skills and 
 - **Links, backlinks and a graph.** A link to something you cannot read shows as locked and is never named.
 - **Authoring warnings.** Small, dismissable hints when a skill or rule breaks the usual guidelines (vague names, descriptions that do not say when to use them, long rules, broken links). They come back from the MCP write tools too, so agents fix their own drafts.
 - **Audit.** Every call, including which agent read which skill version. Seven days in the database, then archived to R2.
+- **Usage.** Which skills and docs agents actually load, by whom, and what they never find: loads, times shown in search results, a daily chart and notes like *Never found* or *No links in*. Owners only, informative only, 90 days. The graph can size nodes by use.
+- **Setup guide.** Connections opens with per-client steps for Claude, ChatGPT and Copilot Studio and a prompt to try. Dismiss it; the Setup guide button brings it back.
 - **REST, MCP and a typed client from one registry.** Every operation is defined once.
 - **Desktop and phone.** The phone layout follows iOS conventions: tab bar, push navigation, sheets, swipe actions.
 - **Cheap to run.** One Cloudflare Worker with D1, R2 and KV, on the $5 Workers plan.

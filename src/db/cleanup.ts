@@ -2,6 +2,7 @@ import type { Env } from '../env';
 import { all, stmt } from './d1';
 import { auditStmt } from './audit';
 import { archiveAudit } from './archive';
+import { pruneUsageStmt } from './usage';
 
 const DAY = 86400 * 1000;
 
@@ -9,7 +10,7 @@ const DAY = 86400 * 1000;
  * Cron (twice a day):
  * - assets not referenced by any version or draft for 7 days are deleted from R2 and D1
  * - audit rows older than 7 days are archived to R2 (audit/YYYY/MM/DD/*.ndjson.gz) and deleted from D1
- * - expired sessions and login attempts are swept
+ * - expired sessions and login attempts are swept, usage older than 90 days is dropped
  */
 export async function cleanup(env: Env, now: number = Date.now()): Promise<{ assets: number; audit: number; files: string[] }> {
   const candidates = await all<{ id: string; r2_key: string }>(
@@ -27,6 +28,7 @@ export async function cleanup(env: Env, now: number = Date.now()): Promise<{ ass
   await env.DB.batch([
     stmt(env.DB, 'DELETE FROM sessions WHERE expires_at < ?', now),
     stmt(env.DB, 'DELETE FROM login_attempts WHERE expires_at < ?', now),
+    pruneUsageStmt(env.DB, now),
   ]);
   const archived = await archiveAudit(env, now);
   await auditStmt(env.DB, { actorId: null, via: 'system', client: 'cron', op: 'cleanup', nodeId: null, version: null, ok: true, detail: { assets: candidates.length, audit_archived: archived.rows, files: archived.files.length } }).run();

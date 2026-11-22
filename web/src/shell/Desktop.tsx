@@ -10,6 +10,7 @@ import { DrawerContent } from './Drawer';
 import { SearchResults, useSearch, searchIds } from './search';
 import { Main } from './Main';
 import { brandName, brandOrg } from '../lib/brand';
+import { useGuideOn } from '../pages/SetupGuide';
 
 function SearchBox(): ReactElement {
   const q = useUI((s) => s.q);
@@ -94,12 +95,13 @@ function Top({ route }: { route: Route }): ReactElement {
   );
 }
 
-const PAGE_VIEWS = new Set(['people', 'teams', 'team', 'audit', 'tokens', 'connections', 'graph', 'search', 'account']);
+const PAGE_VIEWS = new Set(['people', 'teams', 'team', 'audit', 'usage', 'tokens', 'connections', 'graph', 'search', 'account']);
 
 function Rail({ route }: { route: Route }): ReactElement {
   const me = useMe();
   const owner = me.data?.user.org_role === 'owner';
-  const it = (to: string, icon: string, tip: string, on: boolean): ReactElement => (
+  const guide = useGuideOn();
+  const it = (to: string, icon: string, tip: string, on: boolean, dot = false): ReactElement => (
     <button
       key={to}
       className={'ib' + (on ? ' on' : '')}
@@ -112,6 +114,7 @@ function Rail({ route }: { route: Route }): ReactElement {
       }}
     >
       <Ic n={icon} s={19} />
+      {dot ? <span className="rdot" aria-hidden="true" /> : null}
     </button>
   );
   const files = route.name === 'home' || route.name === 'node' || route.name === 'trash';
@@ -124,11 +127,12 @@ function Rail({ route }: { route: Route }): ReactElement {
           {it('/people', 'user', 'People', route.name === 'people')}
           {it('/teams', 'users', 'Teams', route.name === 'teams' || route.name === 'team')}
           {it('/audit', 'activity', 'Audit', route.name === 'audit')}
+          {it('/usage', 'chart', 'Usage', route.name === 'usage')}
         </>
       ) : null}
       <div className="sp" />
       {it('/settings/tokens', 'key', 'API tokens', route.name === 'tokens')}
-      {it('/settings/connections', 'plug', 'Connections', route.name === 'connections')}
+      {it('/settings/connections', 'plug', 'Connections', route.name === 'connections', guide && route.name !== 'connections')}
     </nav>
   );
 }

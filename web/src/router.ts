@@ -10,6 +10,7 @@ export type Route =
   | { name: 'teams' }
   | { name: 'team'; id: string }
   | { name: 'audit' }
+  | { name: 'usage' }
   | { name: 'tokens' }
   | { name: 'connections' }
   | { name: 'trash' }
@@ -29,6 +30,7 @@ export function parse(pathname: string, search: string): Route {
   if (p === '/teams') return { name: 'teams' };
   if ((m = /^\/teams\/([^/]+)$/.exec(p))) return { name: 'team', id: decodeURIComponent(m[1]!) };
   if (p === '/audit') return { name: 'audit' };
+  if (p === '/usage') return { name: 'usage' };
   if (p === '/settings/tokens') return { name: 'tokens' };
   if (p === '/settings/connections') return { name: 'connections' };
   if (p === '/trash') return { name: 'trash' };

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Env } from '../env';
 import { Authz, type Actor, type Requirement } from '../authz/authorize';
 import { auditStmt } from '../db/audit';
+import { usageStmts } from '../db/usage';
 import type { NodeRow } from '../db/d1';
 import { AppError } from '../lib/errors';
 import type { AnyOp, OpContext } from './types';
@@ -34,7 +35,7 @@ export function zodIssues(e: z.ZodError): Record<string, unknown> {
 
 /**
  * Runs one registry operation: validate input, resolve target, authorize, handle, validate output, audit.
- * Every call writes exactly one audit row, success or failure.
+ * Every call writes exactly one audit row, success or failure. Successful MCP calls also record usage.
  */
 export async function runOp(op: AnyOp, raw: unknown, rt: RunEnv): Promise<unknown> {
   const az = rt.az ?? new Authz(rt.env.DB, rt.actor);
@@ -46,6 +47,7 @@ export async function runOp(op: AnyOp, raw: unknown, rt: RunEnv): Promise<unknow
     node: null,
     role: 0,
     audit: {},
+    usage: {},
     waitUntil: rt.waitUntil,
   };
   let ok = false;
@@ -106,7 +108,9 @@ export async function runOp(op: AnyOp, raw: unknown, rt: RunEnv): Promise<unknow
       version: ctx.audit.version ?? null,
       ok,
       detail: Object.keys(detail).length ? detail : null,
-    }).run();
-    await write.catch((err: unknown) => console.error(JSON.stringify({ level: 'error', msg: 'audit write failed', err: String(err) })));
+    });
+    const usage = ok && rt.actor.via === 'mcp' ? usageStmts(rt.env.DB, rt.actor.user.id, ctx.usage) : [];
+    const done = usage.length ? rt.env.DB.batch([write, ...usage]) : write.run();
+    await done.catch((err: unknown) => console.error(JSON.stringify({ level: 'error', msg: 'audit write failed', err: String(err) })));
   }
 }

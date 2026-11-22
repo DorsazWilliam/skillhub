@@ -19,13 +19,15 @@ import { firstH1 } from '../ui/Markdown';
 import { useSave } from '../editor/status';
 import { restoreNode, deleteNode } from '../actions';
 import { gestureHooks } from './gestures';
+import { UsageMobile } from '../pages/Usage';
+import { SetupGuide, GuideButton, useGuideOn } from '../pages/SetupGuide';
 
 const Editor = lazy(() => import('../editor/Editor'));
 
 /** iPhone layout (< 768 px): tab bar, one push stack per tab, inset grouped lists, sheets (docs/MOBILE.md). */
 
 type Tab = 'home' | 'search' | 'graph' | 'more';
-const MORE = new Set(['people', 'teams', 'team', 'audit', 'tokens', 'connections', 'trash', 'account']);
+const MORE = new Set(['people', 'teams', 'team', 'audit', 'usage', 'tokens', 'connections', 'trash', 'account']);
 const tabOf = (r: Route): Tab => (r.name === 'search' ? 'search' : r.name === 'graph' ? 'graph' : MORE.has(r.name) ? 'more' : 'home');
 const ROOT: Record<Tab, string> = { home: '/', search: '/search', graph: '/graph', more: '/account' };
 const lastOf: Record<Tab, string> = { ...ROOT };
@@ -501,6 +503,7 @@ function AccountRoot({ anim }: { anim: string }): ReactElement {
               <NavRow icon="user" color="#007aff" label="People" onClick={() => navigate('/people')} />
               <NavRow icon="users" color="#5856d6" label="Teams" onClick={() => navigate('/teams')} />
               <NavRow icon="activity" color="#ff9500" label="Audit" onClick={() => navigate('/audit')} />
+              <NavRow icon="chart" color="#007aff" label="Usage" onClick={() => navigate('/usage')} />
             </div>
           ) : null}
           <div className="m-group">
@@ -805,6 +808,7 @@ function ConnsScreen({ anim, onBack }: { anim: string; onBack: () => void }): Re
   const me = useMe();
   const c = useConns();
   const url = me.data?.mcp_url ?? '';
+  const guide = useGuideOn();
   return (
     <Screen
       anim={anim}
@@ -813,7 +817,8 @@ function ConnsScreen({ anim, onBack }: { anim: string; onBack: () => void }): Re
       title="Connections"
       body={
         <>
-          <div className="m-pad">
+          <div className="m-pad">{guide ? <SetupGuide mobile /> : <GuideButton block />}</div>
+          <div className="m-pad" hidden={guide}>
             <div className="urlbox">
               <span>{url}</span>
               <button className="ib sm" aria-label="Copy" onClick={() => void navigator.clipboard?.writeText(url)}>
@@ -909,6 +914,8 @@ function MoreScreen({ route, anim }: { route: Route; anim: string }): ReactEleme
       return <TeamScreen id={route.id} anim={anim} onBack={back} />;
     case 'audit':
       return <AuditScreen anim={anim} onBack={back} />;
+    case 'usage':
+      return <Screen anim={anim} back onBack={back} title="Usage" body={<UsageMobile />} />;
     case 'tokens':
       return <TokensScreen anim={anim} onBack={back} />;
     case 'connections':

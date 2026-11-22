@@ -10,6 +10,7 @@ import { setUI } from '../state';
 import { navigate } from '../router';
 import { goNode, restoreNode } from '../actions';
 import { useAudit } from '../shell/Drawer';
+import { SetupGuide, GuideButton, useGuideOn } from './SetupGuide';
 
 /** Owner pages (GitHub org People and Teams), audit, tokens, connections and trash (prototype admin & settings). */
 
@@ -825,13 +826,16 @@ export function ConnectionsPage(): ReactElement {
   const c = useConns();
   const url = me.data?.mcp_url ?? '';
   const items = c.data?.items ?? [];
+  const guide = useGuideOn();
   return (
     <div className="page wide">
       <div className="ph1">
         <h1>Connections</h1>
         <div className="grow" />
+        <GuideButton />
       </div>
-      <div className="connect">
+      {guide ? <SetupGuide /> : null}
+      <div className="connect" hidden={guide}>
         <span className="cic">
           <Ic n="plug" s={19} />
         </span>

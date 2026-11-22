@@ -9,6 +9,7 @@ import { GraphPage } from '../pages/Graph';
 import { SearchPage } from '../pages/SearchPage';
 import { PeoplePage, TeamsPage, TeamPage, AuditPage, TokensPage, ConnectionsPage, TrashPage } from '../pages/Admin';
 import { ApiError } from '../api/client';
+import { UsagePage } from '../pages/Usage';
 
 /**
  * Resolves /n/:id. A skill folder opens its SKILL.md (prototype goNode); a path or canonical path is replaced by the id.
@@ -79,6 +80,8 @@ export function Main({ route }: { route: Route }): ReactElement {
       return <TeamPage id={route.id} />;
     case 'audit':
       return <AuditPage />;
+    case 'usage':
+      return <UsagePage />;
     case 'tokens':
       return <TokensPage />;
     case 'connections':

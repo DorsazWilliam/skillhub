@@ -1045,6 +1045,32 @@ export type ListAuditOutput = {
   next_cursor: string | null;
 };
 
+/** How agents use the library over the last N days: per published skill and documentation page, loads, times shown in find_skills or search results, distinct people and incoming links. Rules are not listed (every agent gets them on connect). (scope: admin) */
+export type GetUsageInput = {
+  days?: number;
+};
+export type GetUsageOutput = {
+  days: Array<string>;
+  totals: {
+    loads: number;
+    shown: number;
+    people: number;
+  };
+  items: Array<{
+    id: string;
+    kind: "skill" | "doc";
+    name: string;
+    path: string;
+    canonical_path: string | null;
+    loads: number;
+    shown: number;
+    people: number;
+    last_load_at: number | null;
+    daily: Array<number>;
+    links_in: number;
+  }>;
+};
+
 /** Export every published document as a zip of markdown files with relative image links. (scope: admin) */
 export type ExportTreeInput = Record<string, unknown>;
 export type ExportTreeOutput = {
@@ -1119,6 +1145,7 @@ export const api = {
   remove_team_member: (input: RemoveTeamMemberInput): Promise<RemoveTeamMemberOutput> => call<RemoveTeamMemberOutput>("DELETE", "/teams/{team}/members/{user}", input as Record<string, unknown>, ["team","user"]),
   list_team_access: (input: ListTeamAccessInput): Promise<ListTeamAccessOutput> => call<ListTeamAccessOutput>("GET", "/teams/{team}/access", input as Record<string, unknown>, ["team"]),
   list_audit: (input: ListAuditInput): Promise<ListAuditOutput> => call<ListAuditOutput>("GET", "/audit", input as Record<string, unknown>, []),
+  get_usage: (input: GetUsageInput): Promise<GetUsageOutput> => call<GetUsageOutput>("GET", "/usage", input as Record<string, unknown>, []),
   export_tree: (input: ExportTreeInput = {}): Promise<ExportTreeOutput> => call<ExportTreeOutput>("POST", "/export", input as Record<string, unknown>, []),
   get_settings: (input: GetSettingsInput = {}): Promise<GetSettingsOutput> => call<GetSettingsOutput>("GET", "/settings", input as Record<string, unknown>, []),
 } as const;

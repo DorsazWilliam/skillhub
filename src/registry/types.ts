@@ -3,6 +3,7 @@ import type { Env } from '../env';
 import type { Actor, Authz } from '../authz/authorize';
 import type { Scope } from '../authz/scopes';
 import type { NodeRow } from '../db/d1';
+import type { UsageInfo } from '../db/usage';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -32,6 +33,8 @@ export interface OpContext {
   /** The actor's effective role on the target node (0 when not a node op). */
   role: number;
   audit: AuditInfo;
+  /** Agent usage to record when the call succeeds over MCP. */
+  usage: UsageInfo;
   waitUntil: (p: Promise<unknown>) => void;
 }
 

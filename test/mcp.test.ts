@@ -198,3 +198,40 @@ describe('MCP instructions carry the rules', () => {
     expect(w.json.warnings.map((x: { code: string }) => x.code)).toEqual(['rules-cap']);
   });
 });
+
+describe('usage', () => {
+  type Item = { id: string; kind: string; path: string; loads: number; shown: number; people: number; daily: number[]; last_load_at: number | null };
+  const hub = async (owner: Client): Promise<Item> => {
+    const r = await owner.call('GET', '/usage?days=7');
+    expect(r.status).toBe(200);
+    return r.json.items.find((i: Item) => i.path === '/skills/_hub/hub-access');
+  };
+
+  it('counts agent loads and results shown per skill, not web reads, and only owners can read it', async () => {
+    const owner = await sessionClient(await makeUser({ role: 'owner' }));
+    const before = await hub(owner);
+    expect(before.kind).toBe('skill');
+
+    const u = await makeUser();
+    const client = await connect((await issueToken(u, ['read'])).token);
+    const found = (await client.callTool({ name: 'find_skills', arguments: { task: 'share a folder with a team' } })) as unknown as { structuredContent: { skills: { id: string }[] } };
+    expect(found.structuredContent.skills.map((s) => s.id)).toContain(before.id);
+    await client.callTool({ name: 'get_skill', arguments: { doc: '/skills/_hub/hub-access' } });
+    await client.callTool({ name: 'get_skill', arguments: { doc: '/skills/_hub/hub-access/SKILL.md' } });
+    await client.close();
+    // Reading in the web app is not agent use.
+    expect((await (await sessionClient(u)).call('GET', `/docs/${before.id}`)).status).toBe(200);
+
+    const after = await hub(owner);
+    expect(after.loads - before.loads).toBe(2);
+    expect(after.shown - before.shown).toBeGreaterThanOrEqual(1);
+    expect(after.people).toBeGreaterThanOrEqual(1);
+    expect(after.daily).toHaveLength(7);
+    expect(after.daily[6]! - before.daily[6]!).toBe(2);
+    expect(after.last_load_at).not.toBeNull();
+
+    const all = (await owner.call('GET', '/usage?days=7')).json.items as Item[];
+    expect(all.some((i) => i.path.startsWith('/rules'))).toBe(false);
+    expect((await (await sessionClient(u)).call('GET', '/usage')).status).toBe(403);
+  });
+});

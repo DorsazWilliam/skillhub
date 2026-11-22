@@ -91,7 +91,9 @@ export const findSkillsOp = defineOp({
   mcp: { tool: 'find_skills', readOnly: true },
   handler: async (ctx, input) => {
     ctx.audit.detail = { q: input.task.slice(0, 100) };
-    return { skills: await findSkills(ctx.az, input.task, input.limit) };
+    const skills = await findSkills(ctx.az, input.task, input.limit);
+    ctx.usage.shown = skills.map((s) => s.id);
+    return { skills };
   },
 });
 
@@ -148,6 +150,7 @@ export const search = defineOp({
     const roles = await ctx.az.roles(candidates);
     const readable = candidates.filter((n) => (roles.get(n.id) ?? 0) > 0).slice(0, input.limit);
     const outs = await nodeOuts(ctx.az, readable, roles);
+    ctx.usage.shown = outs.map((o) => o.id);
     return {
       items: outs.map((o) => ({
         node: o,

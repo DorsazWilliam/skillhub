@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
-import { useGraph } from '../api/hooks';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../api/client';
+import { useGraph, useMe } from '../api/hooks';
 import { Ic } from '../lib/icons';
 import { AREAS, AREA_KEYS, areaKey, type AreaKey } from '../lib/util';
 import { IB } from '../ui/common';
@@ -66,7 +68,17 @@ const G = {
   mobile: false,
   onFocus: (_o: GN | null): void => undefined,
   sig: '',
+  /** Usage overlay (owners): node size from agent loads over 30 days, unused faded. */
+  usage: false,
+  loads: null as Map<string, number> | null,
 };
+
+/** Turns the usage overlay on or off for the next time the graph is shown. */
+export function showUsageOnGraph(v: boolean): void {
+  G.usage = v;
+}
+
+const usageOn = (o: GN): boolean => G.usage && !!G.loads && o.area !== 'rules';
 
 function rnd(seed: number): () => number {
   return () => {
@@ -79,7 +91,7 @@ function rnd(seed: number): () => number {
 }
 
 const gVis = (o: GN | undefined | null): o is GN => !!o && G.f[o.area];
-const gRad = (o: GN): number => 4.5 + Math.sqrt(o.deg) * 2.5;
+const gRad = (o: GN): number => (usageOn(o) ? 3.5 + Math.sqrt(G.loads!.get(o.id) ?? 0) * 1.5 : 4.5 + Math.sqrt(o.deg) * 2.5);
 const anch = (k: AreaKey): [number, number] => {
   const a = ANCH[k];
   return G.H > G.W * 1.2 ? [a[1] * 1.1, a[0] * 1.1] : a;
@@ -285,7 +297,7 @@ function draw(): void {
   for (const o of G.nodes) {
     if (!gVis(o)) continue;
     const dim = act && !nb.has(o.id);
-    x.globalAlpha = dim ? 0.16 : 1;
+    x.globalAlpha = dim ? 0.16 : usageOn(o) && !G.loads!.get(o.id) ? 0.25 : 1;
     const r = gRad(o);
     if (o === act) {
       x.globalAlpha = 0.22;
@@ -566,6 +578,11 @@ export function GraphPage({ focus, mobile }: { focus: string | null; mobile?: bo
   const [card, setCard] = useState<GN | null>(null);
   const [q, setQ] = useState(G.q);
   useUI((s) => s.theme);
+  const owner = useMe().data?.user.org_role === 'owner';
+  const [usage, setUsage] = useState(G.usage);
+  const u = useQuery({ queryKey: ['usage', 30], enabled: owner && usage, staleTime: 60_000, queryFn: () => api.get_usage({ days: 30 }) });
+  G.usage = owner && usage;
+  G.loads = u.data ? new Map(u.data.items.map((i) => [i.id, i.loads])) : null;
   G.mobile = !!mobile;
   G.onFocus = (o) => setCard(o);
 
@@ -657,6 +674,21 @@ export function GraphPage({ focus, mobile }: { focus: string | null; mobile?: bo
             }}
           />
         </div>
+        {owner ? (
+          <button
+            className={'btn sm gu' + (usage ? ' on' : '')}
+            aria-pressed={usage}
+            data-tip="Size by agent loads in the last 30 days, fade what was never loaded"
+            onClick={() => {
+              setUsage(!usage);
+              G.alpha = Math.max(G.alpha, 0.35);
+              kick();
+            }}
+          >
+            <Ic n="chart" s={14} />
+            <span>Usage</span>
+          </button>
+        ) : null}
       </div>
       <div className="gzoom">
         <IB icon="plus" tip="Zoom in" data-a="gz-in" onClick={() => zoomAt(G.W / 2, G.H / 2, G.zoom * 1.3)} />
