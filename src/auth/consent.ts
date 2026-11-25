@@ -63,3 +63,10 @@ export function errorPage(message: string, nonce: string): string {
 <style nonce="${nonce}">body{font:14px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;color:#0f172a}@media (prefers-color-scheme:dark){body{background:#0b0f17;color:#e5e7eb}}p{max-width:360px;text-align:center}</style>
 </head><body><p>${esc(message)}</p></body></html>`;
 }
+
+/** A one-button page that posts a token back (email sign-in links: a click, so mail scanners do not use the link up). */
+export function confirmPage(p: { title: string; text: string; action: string; token: string; button: string; nonce: string }): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(p.title)}</title>
+<style nonce="${p.nonce}">body{font:15px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px;color:#0f172a;background:#f6f7f9}@media (prefers-color-scheme:dark){body{background:#0a0c10;color:#e6e9ef}}.c{text-align:center;max-width:340px}h1{font-size:20px;margin:0 0 8px}p{color:#64748b;margin:0 0 20px}button{font:600 15px system-ui,sans-serif;background:#2563eb;color:#fff;border:0;border-radius:10px;padding:11px 22px;cursor:pointer}</style></head>
+<body><form class="c" method="post" action="${esc(p.action)}"><h1>${esc(p.title)}</h1><p>${esc(p.text)}</p><input type="hidden" name="token" value="${esc(p.token)}"><button type="submit">${esc(p.button)}</button></form></body></html>`;
+}

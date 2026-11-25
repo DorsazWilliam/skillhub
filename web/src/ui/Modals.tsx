@@ -402,7 +402,7 @@ function ShareModal({ m }: { m: Extract<Modal, { type: 'share' }> }): ReactEleme
   const teams = useTeams();
   const pn = usePrincipalName();
   const [q, setQ] = useState('');
-  const [pick, setPick] = useState<{ type: 'user' | 'team'; id: string } | null>(null);
+  const [pick, setPick] = useState<{ type: 'user' | 'team' | 'invite'; id: string } | null>(null);
   const [newRole, setNewRole] = useState(1);
   const [cq, setCq] = useState('');
   const [check, setCheck] = useState<string | null>(null);
@@ -416,6 +416,8 @@ function ShareModal({ m }: { m: Extract<Modal, { type: 'share' }> }): ReactEleme
         .filter((c) => (c.name + ' ' + c.sub).toLowerCase().includes(ql))
         .slice(0, 6)
     : [];
+  // An email address with no account: offer an invitation (they get this folder when they sign in).
+  const inviteEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(q.trim()) && !(users.data ?? []).some((u) => (u.email ?? '').toLowerCase() === ql.trim()) ? q.trim().toLowerCase() : null;
   const all = grants.data?.grants ?? [];
   const direct = all.filter((g) => !g.inherited_from);
   const inh = all.filter((g) => g.inherited_from);
@@ -424,6 +426,22 @@ function ShareModal({ m }: { m: Extract<Modal, { type: 'share' }> }): ReactEleme
   };
   const grant = async (): Promise<void> => {
     if (!pick) return;
+    if (pick.type === 'invite') {
+      try {
+        const r = await api.create_invitation({ email: pick.id, access: [{ folder: m.id, role: ROLE_KEY[newRole] as 'viewer' }] });
+        if (r.emailed) toast('Invitation sent to ' + pick.id, { icon: 'user-plus' });
+        else {
+          copyText(r.link);
+          toast('Invitation link copied', { icon: 'link', sub: 'Send it to ' + pick.id });
+        }
+        setPick(null);
+        setQ('');
+        invalidate('invitations');
+      } catch (e) {
+        errorToast(e);
+      }
+      return;
+    }
     try {
       await api.grant_access({ folder: m.id, principal_type: pick.type, principal: pick.id, role: ROLE_KEY[newRole] as 'viewer' });
       toast('Shared with ' + pn(pick.type, pick.id), { icon: 'user-plus' });
@@ -465,8 +483,8 @@ function ShareModal({ m }: { m: Extract<Modal, { type: 'share' }> }): ReactEleme
         <div className="addrow">
           {pick ? (
             <div className="picked">
-              <PAv type={pick.type} id={pick.id} name={pn(pick.type, pick.id)} s={24} />
-              <span className="grow ell">{pn(pick.type, pick.id)}</span>
+              {pick.type === 'invite' ? <Ic n="user-plus" s={18} /> : <PAv type={pick.type} id={pick.id} name={pn(pick.type, pick.id)} s={24} />}
+              <span className="grow ell">{pick.type === 'invite' ? 'Invite ' + pick.id : pn(pick.type, pick.id)}</span>
               <IB className="ib xs" icon="x" s={13} tip="Clear" onClick={() => setPick(null)} />
             </div>
           ) : (
@@ -482,16 +500,26 @@ function ShareModal({ m }: { m: Extract<Modal, { type: 'share' }> }): ReactEleme
                 if (e.key === 'Enter' && cands[0]) {
                   e.preventDefault();
                   setPick({ type: cands[0].type, id: cands[0].id });
+                } else if (e.key === 'Enter' && inviteEmail) {
+                  e.preventDefault();
+                  setPick({ type: 'invite', id: inviteEmail });
                 }
               }}
             />
           )}
           {roleSel(newRole, (v) => setNewRole(Number(v)), false, { border: '1px solid var(--border-2)', height: 34 })}
           <button className="btn primary" disabled={!pick} onClick={() => void grant()}>
-            Add
+            {pick?.type === 'invite' ? 'Invite' : 'Add'}
           </button>
-          {cands.length && !pick ? (
+          {(cands.length || inviteEmail) && !pick ? (
             <div className="sugg">
+              {inviteEmail ? (
+                <button className="mi" data-invite="1" onClick={() => setPick({ type: 'invite', id: inviteEmail })}>
+                  <Ic n="user-plus" s={18} />
+                  <span>Invite {inviteEmail}</span>
+                  <span className="r">by email</span>
+                </button>
+              ) : null}
               {cands.map((c) => (
                 <button key={c.type + c.id} className="mi" onClick={() => setPick({ type: c.type, id: c.id })}>
                   <PAv type={c.type} id={c.id} name={c.name} s={24} />

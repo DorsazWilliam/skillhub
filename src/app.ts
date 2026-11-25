@@ -5,6 +5,7 @@ import { uiApp } from './http/ui';
 import { assetApp } from './http/assets';
 import { prototypeApp } from './http/prototypes';
 import { authApp } from './auth/routes';
+import { passkeyApp } from './auth/passkeys';
 import { devApp } from './auth/dev';
 
 /** Everything that is not /mcp and not an OAuth protocol endpoint. */
@@ -13,6 +14,7 @@ export function buildApp(): Hono<AppEnv> {
   app.get('/healthz', (c) => c.json({ ok: true }, 200, { 'cache-control': 'no-store' }));
   app.route('/', devApp());
   app.route('/', authApp());
+  app.route('/', passkeyApp());
   app.route('/', assetApp());
   app.route('/', prototypeApp());
   app.route('/api/v1/ui', uiApp());

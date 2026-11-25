@@ -24,6 +24,7 @@ const UserOut = z.object({
   email: z.string().nullable(),
   org_role: z.enum(['owner', 'member']).optional(),
   status: z.enum(['active', 'suspended']).optional(),
+  external: z.boolean().optional().describe('Joined through an invitation from outside the organization: never an owner'),
   last_login_at: z.number().nullable().optional(),
   created_at: z.number().optional(),
   teams: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
@@ -93,6 +94,7 @@ export const listUsers = defineOp({
         email: u.email,
         org_role: u.org_role,
         status: u.status,
+        external: u.is_external === 1,
         last_login_at: u.last_login_at,
         created_at: u.created_at,
         teams: teams.filter((t) => t.user_id === u.id).map((t) => ({ id: t.id, name: t.name })),
@@ -113,6 +115,7 @@ export const setUserRole = defineOp({
   mcp: { tool: 'set_user_role' },
   handler: async (ctx, input) => {
     const u = await mustUser(ctx.db, input.user);
+    if (input.role === 'owner' && u.is_external === 1) throw invalid('People invited from outside the organization cannot be owners');
     if (u.org_role === 'owner' && input.role === 'member' && u.status === 'active' && (await activeOwnerCount(ctx.db)) <= 1) {
       throw invalid('There must be at least one active owner');
     }

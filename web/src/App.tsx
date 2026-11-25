@@ -120,9 +120,9 @@ export function App(): ReactElement {
   setBrand(me.data);
   const unauth = me.error instanceof ApiError && me.error.status === 401;
   useEffect(() => {
-    if (me.data && route.name === 'login') navigate('/', { replace: true });
+    if (me.data && route.name === 'login' && !new URLSearchParams(window.location.search).has('invite')) navigate('/', { replace: true });
   }, [me.data, route.name]);
-  if (unauth || (route.name === 'login' && !me.data)) return <Login error={route.name === 'login' ? route.error : null} />;
+  if (unauth || (route.name === 'login' && (!me.data || new URLSearchParams(window.location.search).has('invite')))) return <Login error={route.name === 'login' ? route.error : null} />;
   if (!me.data)
     return (
       <div className="screen">

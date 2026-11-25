@@ -47,6 +47,14 @@ spec:
             - { name: ALLOW_GUESTS, value: {{ .Values.allowGuests | quote }} }
             - { name: OWNER_EMAILS, value: {{ .Values.ownerEmails | quote }} }
             - { name: MCP_MAX_SCOPES, value: {{ .Values.mcpMaxScopes | quote }} }
+            - { name: AUTH_PROVIDERS, value: {{ .Values.auth.providers | quote }} }
+            - { name: ALLOW_INVITES, value: {{ .Values.auth.allowInvites | quote }} }
+            - { name: GOOGLE_CLIENT_ID, value: {{ .Values.auth.google.clientId | quote }} }
+            - { name: GOOGLE_DOMAINS, value: {{ .Values.auth.google.domains | quote }} }
+            - { name: OIDC_ISSUER, value: {{ .Values.auth.oidc.issuer | quote }} }
+            - { name: OIDC_CLIENT_ID, value: {{ .Values.auth.oidc.clientId | quote }} }
+            - { name: OIDC_NAME, value: {{ .Values.auth.oidc.name | quote }} }
+            - { name: EMAIL_FROM, value: {{ .Values.auth.emailFrom | quote }} }
             {{- if eq .Values.database.type "sqlite" }}
             - { name: DATABASE_URL, value: "sqlite:/data/skillhub.db" }
             {{- end }}

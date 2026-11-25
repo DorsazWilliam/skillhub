@@ -32,7 +32,8 @@ They connect through canonical `[[area/path]]` links: rules point to skills and 
 
 - **Versions and publishing.** One shared draft per document, immutable versions, a publish pointer. Viewers and most agents only ever see what was published. Rollback is publishing an older version. A whole skill folder publishes in one step.
 - **History and diffs.** Every version is kept and diffable before you publish it.
-- **Access control.** Viewer, Editor, Publisher and Manager on folders, inherited down the tree, with boundaries that stop inheritance. Teams. Sign-in with Microsoft Entra ID.
+- **Access control.** Viewer, Editor, Publisher and Manager on folders, inherited down the tree, with boundaries that stop inheritance. Teams.
+- **Sign-in your way.** Microsoft Entra ID, Google Workspace, your own OpenID Connect server, or email links with passkeys, in any combination. Invite people from outside by email: they join as external users with exactly the access you gave them.
 - **One MCP endpoint.** Claude, ChatGPT and Copilot connect with OAuth, a consent page and scope checkboxes. Tools are filtered by scope and role.
 - **Links, backlinks and a graph.** A link to something you cannot read shows as locked and is never named.
 - **Prototypes.** Clickable HTML mockups, versioned and published like everything else, shown live in the app at desktop, tablet and phone width. Agents get a signed preview link to open in their own browser, or a screenshot with console errors (`render_prototype`) when they have none. Prototype scripts run sandboxed, never with the viewer's session.
@@ -178,7 +179,7 @@ docs           ENTRA, DEPLOY, CLIENTS, SECURITY, WHITELABEL, DECISIONS
 
 ## Docs
 
-[Entra setup](docs/ENTRA.md) · [Deploy](docs/DEPLOY.md) · [Self-hosting](docs/SELF_HOSTING.md) · [Connect clients](docs/CLIENTS.md) · [Security](docs/SECURITY.md) · [White-label](docs/WHITELABEL.md) · [Decisions](docs/DECISIONS.md)
+[Entra setup](docs/ENTRA.md) · [Sign-in and invitations](docs/SIGN_IN.md) · [Deploy](docs/DEPLOY.md) · [Self-hosting](docs/SELF_HOSTING.md) · [Connect clients](docs/CLIENTS.md) · [Security](docs/SECURITY.md) · [White-label](docs/WHITELABEL.md) · [Decisions](docs/DECISIONS.md)
 
 ## Status
 

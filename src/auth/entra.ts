@@ -8,6 +8,8 @@ export interface EntraIdentity {
   email: string | null;
   name: string | null;
   guest: boolean;
+  /** Allowed tenant, not a disallowed guest, allowed email domain. False only with allowOutsiders. */
+  member: boolean;
 }
 
 type EntraEnv = Pick<Env, 'ENTRA_TENANT_ID' | 'ENTRA_ALLOWED_TENANTS' | 'ENTRA_CLIENT_ID' | 'ALLOWED_EMAIL_DOMAINS' | 'ALLOW_GUESTS'>;
@@ -80,9 +82,11 @@ export interface ValidateOptions {
   nonce: string;
   keys?: (tid: string) => JWTVerifyGetKey;
   currentDate?: Date;
+  /** Return outsiders (other tenant, guest, other domain) with member=false instead of rejecting them: they may hold an invitation. */
+  allowOutsiders?: boolean;
 }
 
-/** SPEC 5.2: every check is mandatory. */
+/** SPEC 5.2: every check is mandatory. With allowOutsiders, the membership checks mark the identity instead of rejecting it. */
 export async function validateIdToken(env: EntraEnv, token: string, opts: ValidateOptions): Promise<EntraIdentity> {
   let unverified: JWTPayload;
   try {
@@ -92,7 +96,8 @@ export async function validateIdToken(env: EntraEnv, token: string, opts: Valida
   }
   const tid = typeof unverified['tid'] === 'string' ? unverified['tid'].toLowerCase() : '';
   if (!GUID.test(tid)) throw new AppError('unauthenticated', 'Token has no tenant');
-  if (!allowedTenants(env).includes(tid)) throw new AppError('unauthenticated', 'Tenant not allowed');
+  const tenantOk = allowedTenants(env).includes(tid);
+  if (!tenantOk && !opts.allowOutsiders) throw new AppError('unauthenticated', 'Tenant not allowed');
 
   const issuer = `https://login.microsoftonline.com/${tid}/v2.0`;
   let payload: JWTPayload;
@@ -115,15 +120,14 @@ export async function validateIdToken(env: EntraEnv, token: string, opts: Valida
 
   const idp = typeof payload['idp'] === 'string' ? payload['idp'] : null;
   const guest = idp !== null && idp !== payload.iss;
-  if (guest && !flag(env.ALLOW_GUESTS)) throw new AppError('forbidden', 'Guest accounts are not allowed');
+  const guestOk = !guest || flag(env.ALLOW_GUESTS);
+  if (!guestOk && !opts.allowOutsiders) throw new AppError('forbidden', 'Guest accounts are not allowed');
 
   const emailClaim = payload['email'] ?? payload['preferred_username'];
   const email = typeof emailClaim === 'string' && emailClaim.includes('@') ? emailClaim.toLowerCase() : null;
   const domains = csv(env.ALLOWED_EMAIL_DOMAINS).map((d) => d.toLowerCase());
-  if (domains.length) {
-    const domain = email?.split('@')[1] ?? '';
-    if (!domains.includes(domain)) throw new AppError('forbidden', 'Email domain not allowed');
-  }
+  const domainOk = !domains.length || domains.includes(email?.split('@')[1] ?? '');
+  if (!domainOk && !opts.allowOutsiders) throw new AppError('forbidden', 'Email domain not allowed');
   const name = typeof payload['name'] === 'string' ? payload['name'] : null;
-  return { tid, oid, email, name, guest };
+  return { tid, oid, email, name, guest, member: tenantOk && guestOk && domainOk };
 }

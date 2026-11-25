@@ -52,6 +52,9 @@
     "ALLOW_GUESTS": "false",
     "OWNER_EMAILS": "",
     "MCP_MAX_SCOPES": "read,write,publish,manage",
-    "CATALOG_IN_TOOL_DESC": "true"
+    "CATALOG_IN_TOOL_DESC": "true",
+    // Sign-in methods: microsoft, google, oidc, email (docs/SIGN_IN.md). Secrets (client secrets, RESEND_API_KEY) as Wrangler secrets.
+    "AUTH_PROVIDERS": "microsoft",
+    "ALLOW_INVITES": "true"
   }
 }

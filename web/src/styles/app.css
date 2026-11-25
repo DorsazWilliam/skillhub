@@ -166,3 +166,12 @@ body.resizing iframe,body.resizing #gc{pointer-events:none}
 .pv-stage.m-pv{height:70vh}
 .pv-stage.m-pv .pv-frame{width:100%;height:100%}
 @media (max-width:860px){.pv-stage{border-radius:12px}}
+
+/* sign-in: methods, email link, invitation */
+.email-login{display:flex;gap:8px;width:100%}
+.email-login .input{flex:1;height:40px}
+.email-login .btn{height:40px}
+.invite-card{width:100%;display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--panel);text-align:left}
+.invite-card form{margin-top:6px}
+.note.ok-note{background:var(--ok-soft);color:var(--ok)}
+.ms:disabled{opacity:.6}

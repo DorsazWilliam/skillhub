@@ -21,7 +21,7 @@ const server = createServer((req, res) => {
 run('node scripts/build-web.mjs');
 run(`npx wrangler d1 migrations apply DB --local --persist-to ${STATE}`);
 
-const vars = { BASE_URL: BASE, DEV_LOGIN: 'true', SESSION_SECRET: randomBytes(32).toString('hex'), ENTRA_CLIENT_SECRET: 'unused-in-e2e' };
+const vars = { BASE_URL: BASE, DEV_LOGIN: 'true', SESSION_SECRET: randomBytes(32).toString('hex'), ENTRA_CLIENT_SECRET: 'unused-in-e2e', AUTH_PROVIDERS: 'microsoft,email', EMAIL_TRANSPORT: 'log' };
 const args = ['wrangler', 'dev', '--infer-origin-from-routes=false', '--port', String(PORT), '--persist-to', STATE, '--show-interactive-dev-session=false'];
 for (const [k, v] of Object.entries(vars)) args.push('--var', `${k}:${v}`);
 const dev = spawn('npx', args, { stdio: ['ignore', 'inherit', 'inherit'], shell: process.platform === 'win32' });

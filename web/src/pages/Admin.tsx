@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react';
+import { startRegistration } from '@simplewebauthn/browser';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { api, uiOnly } from '../api/client';
 import { useMe, useTeams, useUsers, invalidate, invalidateContent } from '../api/hooks';
@@ -130,6 +131,11 @@ export function PeoplePage(): ReactElement {
                           </div>
                           <div className="muted ell" style={{ fontSize: 12.5 }}>
                             {u.email}
+                            {u.external ? (
+                              <span className="chip warn" style={{ marginLeft: 6 }} data-tip="Invited from outside the organization">
+                                External
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -165,7 +171,9 @@ export function PeoplePage(): ReactElement {
                         }}
                       >
                         <option value="member">Member</option>
-                        <option value="owner">Owner</option>
+                        <option value="owner" disabled={u.external}>
+                          Owner
+                        </option>
                       </select>
                     </td>
                     <td>
@@ -198,7 +206,83 @@ export function PeoplePage(): ReactElement {
           </table>
         </div>
       )}
+      <Invitations />
     </div>
+  );
+}
+
+/** Pending and recent invitations, with the access they carry. New ones are sent from Share (type an email address). */
+function Invitations(): ReactElement | null {
+  const q = useQuery({ queryKey: ['invitations'], queryFn: () => api.list_invitations({ status: 'all' }) });
+  const items = (q.data?.items ?? []).filter((i) => i.status === 'pending' || Date.now() - i.created_at < 30 * DAY);
+  if (!items.length) return null;
+  const revoke = async (id: string, email: string): Promise<void> => {
+    try {
+      await api.revoke_invitation({ id });
+      invalidate('invitations');
+      toast('Invitation to ' + email + ' cancelled', { icon: 'x' });
+    } catch (e) {
+      errorToast(e);
+    }
+  };
+  return (
+    <>
+      <div className="sec" style={{ margin: '26px 0 10px' }}>
+        Invitations <span className="cnt">{items.filter((i) => i.status === 'pending').length}</span>
+      </div>
+      <div className="tw-scroll">
+        <table className="t">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Access</th>
+              <th>Invited by</th>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((i) => (
+              <tr key={i.id}>
+                <td>
+                  <div className="row-flex">
+                    <Ic n="user-plus" s={15} />
+                    <span style={{ fontWeight: 500 }}>{i.email}</span>
+                  </div>
+                </td>
+                <td>
+                  <div className="row-flex" style={{ flexWrap: 'wrap', gap: 4 }}>
+                    {i.access.map((a) => (
+                      <span key={a.folder} className="chip">
+                        {a.name ?? 'folder'} · {a.role}
+                      </span>
+                    ))}
+                    {i.teams.map((t) => (
+                      <span key={t.id} className="chip">
+                        {t.name ?? 'team'}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="muted">{i.inviter_name ?? '-'}</td>
+                <td>
+                  <span className={'chip' + (i.status === 'pending' ? ' acc' : i.status === 'accepted' ? ' ok' : '')}>
+                    {i.status === 'pending' ? 'Pending, expires ' + new Date(i.expires_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : i.status[0]!.toUpperCase() + i.status.slice(1)}
+                  </span>
+                </td>
+                <td style={{ width: 44 }}>
+                  {i.status === 'pending' ? (
+                    <Confirm className="ib xs" label="Cancel" tip="Cancel invitation" onConfirm={() => void revoke(i.id, i.email)}>
+                      <Ic n="x" s={14} />
+                    </Confirm>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -749,6 +833,74 @@ export async function revokeToken(id: string, name: string): Promise<void> {
   }
 }
 
+const H = { 'content-type': 'application/json', 'x-skillhub-csrf': '1' };
+
+/** Passkeys for one-tap sign-in (shown when email sign-in, and so passkeys, are enabled). */
+function Passkeys(): ReactElement | null {
+  const prov = useQuery({ queryKey: ['authProviders'], queryFn: async () => (await fetch('/auth/providers')).json() as Promise<{ passkeys: boolean }> });
+  const list = useQuery({
+    queryKey: ['passkeys'],
+    enabled: !!prov.data?.passkeys,
+    queryFn: async () => (await fetch('/auth/passkeys', { credentials: 'same-origin' })).json() as Promise<{ items: { id: string; name: string | null; created_at: number; last_used_at: number | null }[] }>,
+  });
+  const [busy, setBusy] = useState(false);
+  if (!prov.data?.passkeys) return null;
+  const add = async (): Promise<void> => {
+    setBusy(true);
+    try {
+      const o = await fetch('/auth/passkeys/options', { method: 'POST', credentials: 'same-origin', headers: H });
+      const response = await startRegistration({ optionsJSON: await o.json() });
+      const name = /iPhone|iPad|Mac/.test(navigator.userAgent) ? 'Apple device' : /Android/.test(navigator.userAgent) ? 'Android device' : /Windows/.test(navigator.userAgent) ? 'Windows Hello' : 'Passkey';
+      const r = await fetch('/auth/passkeys', { method: 'POST', credentials: 'same-origin', headers: H, body: JSON.stringify({ response, name }) });
+      if (!r.ok) throw new Error(((await r.json()) as { error?: { message: string } }).error?.message ?? 'The passkey was not saved');
+      toast('Passkey added', { icon: 'key' });
+      void list.refetch();
+    } catch (e) {
+      if (e instanceof Error && e.name !== 'NotAllowedError') errorToast(e);
+    }
+    setBusy(false);
+  };
+  const remove = async (id: string): Promise<void> => {
+    await fetch('/auth/passkeys/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'same-origin', headers: H });
+    toast('Passkey removed', { icon: 'trash' });
+    void list.refetch();
+  };
+  const items = list.data?.items ?? [];
+  return (
+    <div className="card" style={{ marginBottom: 22 }}>
+      <div className="row-flex">
+        <Ic n="key" s={17} />
+        <div className="grow">
+          <div style={{ fontWeight: 600 }}>Passkeys</div>
+          <div className="muted" style={{ fontSize: 12.5 }}>
+            Sign in with your fingerprint, face or device PIN instead of an email link.
+          </div>
+        </div>
+        <button className="btn sm" disabled={busy} onClick={() => void add()}>
+          <Ic n={busy ? 'loader' : 'plus'} s={14} c={busy ? 'spin' : undefined} />
+          <span>Add a passkey</span>
+        </button>
+      </div>
+      {items.length ? (
+        <div style={{ marginTop: 10 }}>
+          {items.map((k) => (
+            <div key={k.id} className="prow" style={{ paddingLeft: 0 }}>
+              <Ic n="key" s={15} />
+              <div className="grow">
+                <div className="pn">{k.name ?? 'Passkey'}</div>
+                <div className="ps">Added {ago(k.created_at)}{k.last_used_at ? ', last used ' + ago(k.last_used_at) : ''}</div>
+              </div>
+              <Confirm className="ib xs" label="Remove" tip="Remove" onConfirm={() => void remove(k.id)}>
+                <Ic n="trash" s={14} />
+              </Confirm>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function TokensPage(): ReactElement {
   const t = useTokens();
   const items = (t.data?.items ?? []).filter((x) => !x.revoked_at);
@@ -762,6 +914,7 @@ export function TokensPage(): ReactElement {
           <span>Token</span>
         </button>
       </div>
+      <Passkeys />
       {t.isLoading ? (
         <Spinner />
       ) : items.length ? (

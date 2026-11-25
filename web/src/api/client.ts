@@ -46,6 +46,7 @@ export type WhoamiOutput = {
     name: string | null;
     email: string | null;
     org_role: "owner" | "member";
+    external: boolean;
   };
   teams: Array<{
     id: string;
@@ -964,6 +965,59 @@ export type ListTrashOutput = {
   }>;
 };
 
+/** Invite someone by email, with access attached: folder roles (you must manage each folder) and teams (owner or team maintainer). They get it when they sign in, with any enabled method. Returns the link; it is emailed when email is configured. (scope: manage) */
+export type CreateInvitationInput = {
+  email: string;
+  access?: Array<{
+    folder: string;
+    role: "viewer" | "editor" | "publisher" | "manager";
+  }>;
+  teams?: Array<string>;
+  send?: boolean;
+};
+export type CreateInvitationOutput = {
+  id: string;
+  email: string;
+  link: string;
+  expires_at: number;
+  emailed: boolean;
+};
+
+/** Invitations you sent (owners see all), newest first, with their status and the access they carry. (scope: manage) */
+export type ListInvitationsInput = {
+  status?: "pending" | "all";
+};
+export type ListInvitationsOutput = {
+  items: Array<{
+    id: string;
+    email: string;
+    status: "pending" | "accepted" | "revoked" | "expired";
+    invited_by: string;
+    inviter_name: string | null;
+    created_at: number;
+    expires_at: number;
+    accepted_at: number | null;
+    access: Array<{
+      folder: string;
+      name: string | null;
+      role: "viewer" | "editor" | "publisher" | "manager";
+    }>;
+    teams: Array<{
+      id: string;
+      name: string | null;
+    }>;
+  }>;
+};
+
+/** Cancel a pending invitation: its link stops working. Access already granted by an accepted invitation stays (remove it from sharing). (scope: manage) */
+export type RevokeInvitationInput = {
+  id: string;
+};
+export type RevokeInvitationOutput = {
+  id: string;
+  revoked: boolean;
+};
+
 /** List people in the organization. Owners also see role, status, teams and last login. (scope: read) */
 export type ListUsersInput = {
   q?: string;
@@ -977,6 +1031,7 @@ export type ListUsersOutput = {
     email: string | null;
     org_role?: "owner" | "member";
     status?: "active" | "suspended";
+    external?: boolean;
     last_login_at?: number | null;
     created_at?: number;
     teams?: Array<{
@@ -998,6 +1053,7 @@ export type SetUserRoleOutput = {
   email: string | null;
   org_role?: "owner" | "member";
   status?: "active" | "suspended";
+  external?: boolean;
   last_login_at?: number | null;
   created_at?: number;
   teams?: Array<{
@@ -1017,6 +1073,7 @@ export type SetUserStatusOutput = {
   email: string | null;
   org_role?: "owner" | "member";
   status?: "active" | "suspended";
+  external?: boolean;
   last_login_at?: number | null;
   created_at?: number;
   teams?: Array<{
@@ -1269,6 +1326,9 @@ export const api = {
   delete_node: (input: DeleteNodeInput): Promise<DeleteNodeOutput> => call<DeleteNodeOutput>("DELETE", "/nodes/{node}", input as Record<string, unknown>, ["node"]),
   restore_node: (input: RestoreNodeInput): Promise<RestoreNodeOutput> => call<RestoreNodeOutput>("POST", "/trash/{node}/restore", input as Record<string, unknown>, ["node"]),
   list_trash: (input: ListTrashInput): Promise<ListTrashOutput> => call<ListTrashOutput>("GET", "/trash", input as Record<string, unknown>, []),
+  create_invitation: (input: CreateInvitationInput): Promise<CreateInvitationOutput> => call<CreateInvitationOutput>("POST", "/invitations", input as Record<string, unknown>, []),
+  list_invitations: (input: ListInvitationsInput): Promise<ListInvitationsOutput> => call<ListInvitationsOutput>("GET", "/invitations", input as Record<string, unknown>, []),
+  revoke_invitation: (input: RevokeInvitationInput): Promise<RevokeInvitationOutput> => call<RevokeInvitationOutput>("DELETE", "/invitations/{id}", input as Record<string, unknown>, ["id"]),
   list_users: (input: ListUsersInput): Promise<ListUsersOutput> => call<ListUsersOutput>("GET", "/users", input as Record<string, unknown>, []),
   set_user_role: (input: SetUserRoleInput): Promise<SetUserRoleOutput> => call<SetUserRoleOutput>("PUT", "/users/{user}/role", input as Record<string, unknown>, ["user"]),
   set_user_status: (input: SetUserStatusInput): Promise<SetUserStatusOutput> => call<SetUserStatusOutput>("PUT", "/users/{user}/status", input as Record<string, unknown>, ["user"]),

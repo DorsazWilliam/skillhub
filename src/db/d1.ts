@@ -49,6 +49,8 @@ export interface UserRow {
   status: 'active' | 'suspended';
   created_at: number;
   last_login_at: number | null;
+  /** 1 when the user joined through an invitation from outside the organization. */
+  is_external?: number;
 }
 
 export function chainIds(path: string): string[] {

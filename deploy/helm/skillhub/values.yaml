@@ -23,12 +23,22 @@ allowGuests: false
 ownerEmails: ""
 mcpMaxScopes: read,write,publish,manage
 
+# Sign-in (docs/SIGN_IN.md): any of microsoft, google, oidc, email.
+auth:
+  providers: microsoft
+  allowInvites: true
+  google: { clientId: "", domains: "" }          # secret: GOOGLE_CLIENT_SECRET in secrets.extra or existingSecret
+  oidc: { issuer: "", clientId: "", name: "" }  # secret: OIDC_CLIENT_SECRET
+  emailFrom: ""                                  # with SMTP_URL (secret) for email links and invitations
+
 # Secrets: either put them here (the chart creates a Secret) or name an existing Secret with the same keys:
 #   SESSION_SECRET, ENTRA_CLIENT_SECRET, and DATABASE_URL / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY as needed.
 existingSecret: ""
 secrets:
   sessionSecret: ""          # openssl rand -hex 32
   entraClientSecret: ""
+  # Any other secret variables: GOOGLE_CLIENT_SECRET, OIDC_CLIENT_SECRET, SMTP_URL, RESEND_API_KEY...
+  extra: {}
 
 database:
   type: sqlite               # sqlite | postgres

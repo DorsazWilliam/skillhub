@@ -25,6 +25,27 @@ export interface Env {
   DEV_LOGIN?: string;
 
   ENTRA_CLIENT_SECRET: string;
+
+  /** Sign-in methods, comma separated: microsoft, google, oidc, email. Default: microsoft. */
+  AUTH_PROVIDERS?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  /** Google Workspace domains whose users are members (the hd claim). */
+  GOOGLE_DOMAINS?: string;
+  /** Your own OpenID Connect identity server (Keycloak, Okta, Authentik, ADFS...). */
+  OIDC_ISSUER?: string;
+  OIDC_CLIENT_ID?: string;
+  OIDC_CLIENT_SECRET?: string;
+  OIDC_NAME?: string;
+  OIDC_SCOPES?: string;
+  /** Invitations for people outside the organization. On unless 'false'. */
+  ALLOW_INVITES?: string;
+  /** Email sending: 'smtp' (Node, SMTP_URL), 'resend' (RESEND_API_KEY), 'log' or 'memory' (tests). */
+  EMAIL_TRANSPORT?: string;
+  EMAIL_FROM?: string;
+  RESEND_API_KEY?: string;
+  /** Node runtime: sends a message through SMTP_URL. */
+  SEND_MAIL?: (m: { from: string; to: string; subject: string; text: string; html: string }) => Promise<void>;
   SESSION_SECRET: string;
 }
 

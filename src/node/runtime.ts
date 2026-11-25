@@ -104,6 +104,20 @@ function browser(v: Vars): Env['LAUNCH_BROWSER'] {
   };
 }
 
+/** SMTP_URL (smtp://user:pass@host:587 or smtps://...) for sign-in links and invitations. */
+function mailer(v: Vars): Env['SEND_MAIL'] {
+  const url = v['SMTP_URL'];
+  if (!url) return undefined;
+  let transport: { sendMail: (m: Record<string, string>) => Promise<unknown> } | null = null;
+  return async (m) => {
+    if (!transport) {
+      const nm = await import('nodemailer');
+      transport = nm.default.createTransport(url) as unknown as typeof transport;
+    }
+    await transport!.sendMail(m);
+  };
+}
+
 export interface Runtime {
   env: Env;
   engine: Engine;
@@ -135,6 +149,7 @@ export async function createRuntime(v: Vars, opts: { migrations: string | null; 
     ...(opts.assets ? { ASSETS: assetsFetcher(opts.assets) as unknown as Fetcher } : {}),
     RATE_LIMITER: memoryRateLimiter(Number(v['RATE_LIMIT'] ?? 300), 60) as unknown as RateLimit,
     LAUNCH_BROWSER: browser(v),
+    SEND_MAIL: mailer(v),
   } as unknown as Env;
   return { env, engine, close: () => engine.close() };
 }

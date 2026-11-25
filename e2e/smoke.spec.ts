@@ -204,6 +204,28 @@ test('shares a folder', async ({ page }) => {
   await expect(page.locator('.modal .prow', { hasText: 'Tom Becker' })).toBeVisible();
 });
 
+test('the sign-in page offers every enabled method', async ({ page }) => {
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await expect(page.locator('[data-provider="microsoft"]')).toBeVisible();
+  await expect(page.locator('[data-provider="passkey"]')).toBeVisible();
+  await page.locator('.email-login input').fill('someone@acme.com');
+  await page.locator('.email-login button').click();
+  await expect(page.locator('.ok-note')).toContainText('Check your inbox');
+});
+
+test('invites someone by email from Share, listed on People', async ({ page }) => {
+  await signIn(page, 'owner');
+  await open(page, 'documentation/handbook');
+  await page.locator('.acts [aria-label="Share"]').click();
+  await page.locator('#share-q').fill('partner@fabrikam.test');
+  await page.locator('.sugg [data-invite]').click();
+  await page.locator('.modal .addrow .btn.primary', { hasText: 'Invite' }).click();
+  await expect(page.locator('.toast', { hasText: 'Invitation sent to partner@fabrikam.test' })).toBeVisible();
+  await page.goto('/people');
+  await expect(page.locator('table.t tr', { hasText: 'partner@fabrikam.test' })).toContainText('Pending');
+});
+
 test('a viewer cannot see drafts or unpublished documents', async ({ page }) => {
   await signIn(page, 'viewer');
   await page.goto('/n/documentation/data/dbt-conventions');

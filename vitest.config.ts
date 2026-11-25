@@ -20,6 +20,8 @@ export default defineConfig(async () => {
             SESSION_SECRET: 'test-session-secret-0123456789abcdef0123456789abcdef',
             MCP_MAX_SCOPES: 'read,write,publish,manage',
             CATALOG_IN_TOOL_DESC: 'true',
+            AUTH_PROVIDERS: 'microsoft,email',
+            EMAIL_TRANSPORT: 'memory',
           },
         },
       }),

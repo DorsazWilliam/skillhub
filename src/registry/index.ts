@@ -9,6 +9,7 @@ import { getLinks, getGraph } from './links';
 import { publishSkill, getRulesSize } from './skills';
 import { getWarnings, dismissWarning, restoreWarnings } from './warnings';
 import { getUsage } from './usage';
+import { createInvitation, listInvitations, revokeInvitation } from './invitations';
 import { createPrototype, getPrototype, publishPrototype, renderPrototype } from './prototypes';
 import {
   listUsers,
@@ -78,6 +79,9 @@ export const OPS: AnyOp[] = [
   deleteNode,
   restoreNode,
   listTrash,
+  createInvitation,
+  listInvitations,
+  revokeInvitation,
   // ADMIN
   listUsers,
   setUserRole,

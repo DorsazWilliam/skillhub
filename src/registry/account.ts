@@ -10,7 +10,7 @@ export const whoami = defineOp({
   target: { kind: 'user' },
   input: z.object({}),
   output: z.object({
-    user: z.object({ id: z.string(), name: z.string().nullable(), email: z.string().nullable(), org_role: z.enum(['owner', 'member']) }),
+    user: z.object({ id: z.string(), name: z.string().nullable(), email: z.string().nullable(), org_role: z.enum(['owner', 'member']), external: z.boolean() }),
     teams: z.array(z.object({ id: z.string(), name: z.string(), role: z.enum(['member', 'maintainer']) })),
     scopes: z.array(z.string()),
     via: z.string(),
@@ -28,7 +28,7 @@ export const whoami = defineOp({
       u.id,
     );
     return {
-      user: { id: u.id, name: u.name, email: u.email, org_role: u.org_role },
+      user: { id: u.id, name: u.name, email: u.email, org_role: u.org_role, external: u.is_external === 1 },
       teams: [{ id: 'everyone', name: 'everyone', role: 'member' as const }, ...teams],
       scopes: [...ctx.actor.scopes],
       via: ctx.actor.via,
