@@ -74,7 +74,7 @@ The button forks the repository and creates the database, bucket and cache for y
 
 ### Self-hosted
 
-One Docker image runs anywhere: `docker run`, Docker Compose (alone, with bundled Postgres and S3 storage, or against yours) or Kubernetes with the Helm chart in `deploy/helm`. SQLite on a volume, or Postgres and any S3-compatible bucket. See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
+One Docker image runs anywhere: `docker run`, Docker Compose (alone, with bundled Postgres and S3 storage, or against yours) or Kubernetes with the Helm chart in `deploy/helm`. SQLite on a volume, or Postgres with any S3-compatible bucket or Azure Blob Storage. Azure in one command (`deploy/azure/deploy.ps1`: Container Apps, PostgreSQL, Blob Storage with a managed identity), or a single executable for a server without Docker. See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
 
 ### From your machine
 

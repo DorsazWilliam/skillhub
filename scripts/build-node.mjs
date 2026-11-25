@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 await build({
-  entryPoints: [root + 'src/node/server.ts'],
+  entryPoints: [root + 'src/node/start.ts'],
   outfile: root + 'dist/server.mjs',
   bundle: true,
   platform: 'node',

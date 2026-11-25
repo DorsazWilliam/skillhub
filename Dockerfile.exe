@@ -1,0 +1,12 @@
+# Builds the Linux single executable (x64 or arm64, following the build machine) without a local Linux:
+#   docker build -f Dockerfile.exe --output dist .
+# Result: dist/skillhub-linux (needs glibc: Debian, Ubuntu, RHEL...).
+FROM node:24-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund --ignore-scripts
+COPY . .
+RUN node scripts/build-exe.mjs
+
+FROM scratch
+COPY --from=build /app/dist/skillhub /skillhub-linux

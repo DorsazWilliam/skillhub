@@ -1,0 +1,25 @@
+# systemd unit for the single executable.
+#   sudo install -m 755 skillhub-linux /usr/local/bin/skillhub
+#   sudo useradd --system --home /var/lib/skillhub --create-home skillhub
+#   sudo install -m 600 -o skillhub skillhub.env /etc/skillhub.env    (BASE_URL, SESSION_SECRET, ENTRA_* ...)
+#   sudo cp skillhub.service /etc/systemd/system/ && sudo systemctl enable --now skillhub
+[Unit]
+Description=SkillHub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=skillhub
+WorkingDirectory=/var/lib/skillhub
+EnvironmentFile=/etc/skillhub.env
+Environment=NODE_NO_WARNINGS=1
+ExecStart=/usr/local/bin/skillhub
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/skillhub /tmp
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

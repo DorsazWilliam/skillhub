@@ -23,7 +23,8 @@
     "build:node": "node scripts/build-node.mjs",
     "start": "node --no-warnings --enable-source-maps dist/server.mjs",
     "test:node": "vitest run -c vitest.node.config.ts",
-    "test:pg": "vitest run -c vitest.node.config.ts --mode pg"
+    "test:pg": "vitest run -c vitest.node.config.ts --mode pg",
+    "build:exe": "node scripts/build-exe.mjs"
   },
   "dependencies": {
     "@cfworker/json-schema": "^4.1.6",
@@ -70,6 +71,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.3.0",
     "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vite": "^8.3.8",

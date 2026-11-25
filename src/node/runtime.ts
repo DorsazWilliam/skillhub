@@ -5,6 +5,7 @@ import { SqlD1, type Engine } from './sql';
 import { engineFromUrl, migrate } from './engines';
 import { SqlKV } from './kv';
 import { DiskBucket, S3Bucket } from './blob';
+import { AzureBlobBucket } from './azure';
 
 /**
  * Builds the app's bindings (DB, BUCKET, OAUTH_KV, ASSETS, RATE_LIMITER, LAUNCH_BROWSER) from environment variables,
@@ -75,8 +76,18 @@ export function memoryRateLimiter(limit: number, periodS: number): { limit: (o: 
   };
 }
 
-function storage(v: Vars): DiskBucket | S3Bucket {
+function storage(v: Vars): DiskBucket | S3Bucket | AzureBlobBucket {
   const kind = (v['STORAGE'] ?? 'disk').toLowerCase();
+  if (kind === 'azure') {
+    if (!v['AZURE_STORAGE_ACCOUNT']) throw new Error('STORAGE=azure needs AZURE_STORAGE_ACCOUNT');
+    return new AzureBlobBucket({
+      account: v['AZURE_STORAGE_ACCOUNT'],
+      container: v['AZURE_STORAGE_CONTAINER'] ?? 'skillhub',
+      endpoint: v['AZURE_STORAGE_ENDPOINT'],
+      key: v['AZURE_STORAGE_KEY'],
+      clientId: v['AZURE_CLIENT_ID'],
+    });
+  }
   if (kind === 's3') {
     const need = ['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'].filter((k) => !v[k]);
     if (need.length) throw new Error('STORAGE=s3 needs ' + need.join(', '));
@@ -89,7 +100,7 @@ function storage(v: Vars): DiskBucket | S3Bucket {
       pathStyle: (v['S3_FORCE_PATH_STYLE'] ?? 'true') !== 'false',
     });
   }
-  if (kind !== 'disk') throw new Error('STORAGE must be disk or s3');
+  if (kind !== 'disk') throw new Error('STORAGE must be disk or s3 or azure');
   return new DiskBucket(v['STORAGE_DIR'] ?? './data/files');
 }
 
@@ -132,6 +143,7 @@ export async function createRuntime(v: Vars, opts: { migrations: string | null; 
   const db = new SqlD1(engine);
   const bucket = storage(v);
   if (bucket instanceof S3Bucket && v['S3_CREATE_BUCKET'] === 'true') await bucket.ensureBucket();
+  if (bucket instanceof AzureBlobBucket && v['AZURE_CREATE_CONTAINER'] === 'true') await bucket.ensureContainer();
   const vars: Record<string, string> = {};
   for (const [k, val] of Object.entries(v)) if (val !== undefined) vars[k] = val;
   const env = {
