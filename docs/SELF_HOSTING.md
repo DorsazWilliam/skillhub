@@ -24,7 +24,7 @@ Every version tag publishes everything, so nobody needs to clone or build:
 
 - the image `ghcr.io/dorsazwilliam/skillhub:<version>` (also `latest` and `<major>.<minor>`), for linux/amd64 and linux/arm64;
 - the Helm chart `oci://ghcr.io/dorsazwilliam/charts/skillhub`;
-- on the [GitHub release](https://github.com/DorsazWilliam/skillhub/releases): the executables (Linux x64 and arm64, Windows x64, macOS arm64), the Compose files and the Azure template with the image pinned to that version, the systemd unit and `SHA256SUMS`.
+- on the [GitHub release](https://github.com/DorsazWilliam/skillhub/releases): the executables (Linux x64 and arm64, Windows x64), the Compose files and the Azure template with the image pinned to that version, the systemd unit and `SHA256SUMS`.
 
 Replace `0.1.0` below with the version you want. To publish one, set `version` in `package.json`, then push a matching tag (`git tag v0.1.0`, `git push origin v0.1.0`): `.github/workflows/release.yml` tests, builds and publishes. A tag with a suffix (`v0.2.0-rc.1`) is a pre-release and does not move `latest`.
 
@@ -74,7 +74,7 @@ Needs the Azure CLI, signed in with rights to create app registrations. The scri
 
 One file, no Docker, no Node: the web app and the migrations are inside. Download it from the release. SQLite and uploads go to `./data` under the working directory unless you set `DATABASE_URL` and `STORAGE` like the image.
 
-Run it with the same environment variables as the image (at least `BASE_URL`, `SESSION_SECRET` and the sign-in settings). On Linux, `skillhub.service` is a hardened systemd unit. On Windows, run it as a service with a service wrapper such as WinSW or NSSM, or as a scheduled task at startup, and set `NODE_NO_WARNINGS=1` to hide Node's notice about SQLite. The macOS build is signed ad hoc only: remove the quarantine flag with `xattr -d com.apple.quarantine skillhub-macos-arm64`.
+Run it with the same environment variables as the image (at least `BASE_URL`, `SESSION_SECRET` and the sign-in settings). On Linux, `skillhub.service` is a hardened systemd unit. On Windows, run it as a service with a service wrapper such as WinSW or NSSM, or as a scheduled task at startup, and set `NODE_NO_WARNINGS=1` to hide Node's notice about SQLite.
 
 To build one yourself: `npm run build:exe` (for the current system), or `docker build -f Dockerfile.exe --output dist .` for Linux from any machine.
 
