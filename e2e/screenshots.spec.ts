@@ -52,7 +52,7 @@ test.describe('desktop', () => {
     await page.goto('/n/skills/deploy-service');
     await expect(page.locator('.skhead')).toBeVisible();
     await page.goto('/');
-    await expect(page.locator('.tile')).toHaveCount(3);
+    await expect(page.locator('.tile')).toHaveCount(4);
     await shot(page, 'desktop-home.png');
 
     await page.goto('/n/skills/incident-response');
