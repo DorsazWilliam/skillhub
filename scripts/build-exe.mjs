@@ -55,6 +55,8 @@ execFileSync(process.execPath, ['--experimental-sea-config', join(dist, 'sea-con
 const exe = join(dist, process.platform === 'win32' ? 'skillhub.exe' : 'skillhub');
 copyFileSync(process.execPath, exe);
 if (process.platform !== 'win32') chmodSync(exe, 0o755);
+// macOS: the copied node binary is signed; injecting breaks that signature, so drop it first and sign again after.
+if (process.platform === 'darwin') execFileSync('codesign', ['--remove-signature', exe], { stdio: 'inherit' });
 const postject = join(root, 'node_modules/postject/dist/cli.js');
 const args = [postject, exe, 'NODE_SEA_BLOB', join(dist, 'sea-prep.blob'), '--sentinel-fuse', 'NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2', '--overwrite'];
 if (process.platform === 'darwin') args.push('--macho-segment-name', 'NODE_SEA');

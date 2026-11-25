@@ -18,38 +18,38 @@ SkillHub runs on Cloudflare (see DEPLOY.md), as one Docker image anywhere (a VM,
 
 SQLite needs block storage (a normal disk or a ReadWriteOnce volume). Never put it on NFS, SMB or Azure Files: file locking there is unreliable.
 
+## Releases
+
+Every version tag publishes everything, so nobody needs to clone or build:
+
+- the image `ghcr.io/dorsazwilliam/skillhub:<version>` (also `latest` and `<major>.<minor>`), for linux/amd64 and linux/arm64;
+- the Helm chart `oci://ghcr.io/dorsazwilliam/charts/skillhub`;
+- on the [GitHub release](https://github.com/DorsazWilliam/skillhub/releases): the executables (Linux x64 and arm64, Windows x64, macOS arm64), the Compose files and the Azure template with the image pinned to that version, the systemd unit and `SHA256SUMS`.
+
+Replace `0.1.0` below with the version you want. To publish one, set `version` in `package.json`, then push a matching tag (`git tag v0.1.0`, `git push origin v0.1.0`): `.github/workflows/release.yml` tests, builds and publishes. A tag with a suffix (`v0.2.0-rc.1`) is a pre-release and does not move `latest`.
+
 ## Docker
 
 ```powershell
-docker build -t skillhub .
+docker run -d -p 8080:8080 -v skillhub-data:/data --env-file .env ghcr.io/dorsazwilliam/skillhub:0.1.0
 ```
 
-```powershell
-docker run -d -p 8080:8080 -v skillhub-data:/data --env-file .env skillhub
-```
+From source instead: `docker build -t skillhub .`.
 
 ## Docker Compose
 
-Copy `deploy/compose/.env.example` to `deploy/compose/.env` and fill it in, then one of:
+From the release, download `compose-standalone.yml` (or `compose-bundled.yml`, `compose-external.yml`) and `compose.env.example`, save the latter as `.env` next to it and fill it in, then:
 
 ```powershell
-docker compose -f deploy/compose/standalone.yml up -d
+docker compose -f compose-standalone.yml up -d
 ```
 
-```powershell
-docker compose -f deploy/compose/bundled.yml up -d
-```
-
-```powershell
-docker compose -f deploy/compose/external.yml up -d
-```
-
-`standalone` is SQLite on a volume, `bundled` adds Postgres 17 and SeaweedFS, `external` uses the `DATABASE_URL` and `S3_*` you set.
+`standalone` is SQLite on a volume, `bundled` adds Postgres 17 and SeaweedFS, `external` uses the `DATABASE_URL` and `S3_*` you set. The files in `deploy/compose` are the same with `latest`; set `SKILLHUB_IMAGE` to run another image, such as one you built.
 
 ## Kubernetes (Helm)
 
 ```powershell
-helm install skillhub deploy/helm/skillhub --set baseUrl=https://skills.acme.com --set secrets.sessionSecret=$(openssl rand -hex 32) --set entra.tenantId=... --set entra.clientId=... --set secrets.entraClientSecret=... --set ownerEmails=you@acme.com --set ingress.enabled=true
+helm install skillhub oci://ghcr.io/dorsazwilliam/charts/skillhub --version 0.1.0 --set baseUrl=https://skills.acme.com --set secrets.sessionSecret=$(openssl rand -hex 32) --set entra.tenantId=... --set entra.clientId=... --set secrets.entraClientSecret=... --set ownerEmails=you@acme.com --set ingress.enabled=true
 ```
 
 That is SQLite on a 5 Gi volume. For your own Postgres and bucket add:
@@ -58,31 +58,25 @@ That is SQLite on a 5 Gi volume. For your own Postgres and bucket add:
 --set database.type=postgres --set database.url=postgres://... --set storage.type=s3 --set storage.s3.endpoint=https://... --set storage.s3.accessKeyId=... --set storage.s3.secretAccessKey=... --set replicaCount=2
 ```
 
-Or let the chart run them: `--set database.type=postgres --set bundled.postgres.enabled=true --set bundled.postgres.password=... --set storage.type=s3 --set bundled.s3.enabled=true --set bundled.s3.secretKey=...`. Secrets can come from an existing Secret instead (`existingSecret`, same key names as the environment variables). See `values.yaml` for Litestream, the Chromium sidecar, ingress and resources.
+Or let the chart run them: `--set database.type=postgres --set bundled.postgres.enabled=true --set bundled.postgres.password=... --set storage.type=s3 --set bundled.s3.enabled=true --set bundled.s3.secretKey=...`. Secrets can come from an existing Secret instead (`existingSecret`, same key names as the environment variables). `helm show values oci://ghcr.io/dorsazwilliam/charts/skillhub --version 0.1.0` lists Litestream, the Chromium sidecar, ingress and resources. From a clone, `deploy/helm/skillhub` is the same chart.
 
 ## Azure
 
+Download `deploy.ps1` and `main.bicep` from the release into one folder, then:
+
 ```powershell
-./deploy/azure/deploy.ps1 -ResourceGroup skillhub -Location westeurope -OwnerEmails you@acme.com
+./deploy.ps1 -ResourceGroup skillhub -Location westeurope -OwnerEmails you@acme.com
 ```
 
-Needs the Azure CLI, signed in with rights to create app registrations. The script creates the Entra app registration and its secret, deploys `deploy/azure/main.bicep` (Container Apps, PostgreSQL Flexible Server Burstable B1ms, a Storage account reached through a managed identity with shared keys turned off, Log Analytics), registers the redirect URI and prints the sign-in and MCP URLs. With an existing app registration, deploy `main.bicep` (or the compiled `azuredeploy.json`) yourself with `entraTenantId`, `entraClientId`, `entraClientSecret` and `ownerEmails`. Roughly 25 USD a month at list prices, mostly the database.
+Needs the Azure CLI, signed in with rights to create app registrations. The script creates the Entra app registration and its secret, deploys `main.bicep` (Container Apps, PostgreSQL Flexible Server Burstable B1ms, a Storage account reached through a managed identity with shared keys turned off, Log Analytics), registers the redirect URI and prints the sign-in and MCP URLs. With an existing app registration, deploy `main.bicep` (or `azuredeploy.json`) yourself with `entraTenantId`, `entraClientId`, `entraClientSecret` and `ownerEmails`. Roughly 25 USD a month at list prices, mostly the database.
 
 ## Single executable
 
-One file, no Docker, no Node: the web app and the migrations are inside. SQLite and uploads go to `./data` under the working directory unless you set `DATABASE_URL` and `STORAGE` like the image.
+One file, no Docker, no Node: the web app and the migrations are inside. Download it from the release. SQLite and uploads go to `./data` under the working directory unless you set `DATABASE_URL` and `STORAGE` like the image.
 
-```powershell
-npm run build:exe
-```
+Run it with the same environment variables as the image (at least `BASE_URL`, `SESSION_SECRET` and the sign-in settings). On Linux, `skillhub.service` is a hardened systemd unit. On Windows, run it as a service with a service wrapper such as WinSW or NSSM, or as a scheduled task at startup, and set `NODE_NO_WARNINGS=1` to hide Node's notice about SQLite. The macOS build is signed ad hoc only: remove the quarantine flag with `xattr -d com.apple.quarantine skillhub-macos-arm64`.
 
-builds `dist/skillhub.exe` on Windows (or `dist/skillhub` on Linux and macOS). For a Linux server from any machine:
-
-```powershell
-docker build -f Dockerfile.exe --output dist .
-```
-
-Run it with the same environment variables as the image (at least `BASE_URL`, `SESSION_SECRET` and the sign-in settings). On Linux, `deploy/exe/skillhub.service` is a hardened systemd unit. On Windows, run it as a service with a service wrapper such as WinSW or NSSM, or as a scheduled task at startup, and set `NODE_NO_WARNINGS=1` to hide Node's notice about SQLite.
+To build one yourself: `npm run build:exe` (for the current system), or `docker build -f Dockerfile.exe --output dist .` for Linux from any machine.
 
 ## Environment variables
 

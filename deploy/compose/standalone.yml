@@ -1,10 +1,9 @@
 # SkillHub alone: SQLite and uploads on one volume. Nothing else to run.
-#   cp deploy/compose/.env.example deploy/compose/.env   (fill it in)
-#   docker compose -f deploy/compose/standalone.yml up -d
+#   cp .env.example .env   (fill it in)
+#   docker compose -f standalone.yml up -d
 services:
   skillhub:
     image: ${SKILLHUB_IMAGE:-ghcr.io/dorsazwilliam/skillhub:latest}
-    build: ../..
     restart: unless-stopped
     env_file: .env
     environment:

@@ -1,9 +1,8 @@
 # SkillHub against the client's own Postgres and S3-compatible bucket (set DATABASE_URL and the S3_* variables in .env).
-#   docker compose -f deploy/compose/external.yml up -d
+#   docker compose -f external.yml up -d
 services:
   skillhub:
     image: ${SKILLHUB_IMAGE:-ghcr.io/dorsazwilliam/skillhub:latest}
-    build: ../..
     restart: unless-stopped
     env_file: .env
     environment:

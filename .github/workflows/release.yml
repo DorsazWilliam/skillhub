@@ -1,0 +1,188 @@
+name: release
+
+# Publishes a version so nobody has to clone or build anything:
+#   ghcr.io/dorsazwilliam/skillhub:<version>          Docker image, linux/amd64 and linux/arm64
+#   oci://ghcr.io/dorsazwilliam/charts/skillhub       Helm chart
+#   GitHub release                                    executables, Compose files, Azure template, checksums
+# Start it by pushing a tag that matches package.json: git tag v0.1.0 && git push origin v0.1.0
+# A tag with a suffix (v0.2.0-rc.1) is a pre-release: no "latest" image, release marked as pre-release.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/skillhub
+  CHARTS: oci://ghcr.io/${{ github.repository_owner }}/charts
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        name: Version from the tag, checked against package.json
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          p="$(node -p 'require("./package.json").version')"
+          if [ "$v" != "$p" ]; then echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $p"; exit 1; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if [[ "$v" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:node
+      - run: npm run test:pg
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ needs.test.outputs.prerelease == 'false' }}
+          labels: |
+            org.opencontainers.image.title=SkillHub
+            org.opencontainers.image.licenses=Unlicense
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  chart:
+    needs: [test, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+      - run: helm lint deploy/helm/skillhub
+      - run: helm package deploy/helm/skillhub --version "${{ needs.test.outputs.version }}" --app-version "${{ needs.test.outputs.version }}" --destination dist
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+      - run: helm push "dist/skillhub-${{ needs.test.outputs.version }}.tgz" "$CHARTS"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chart
+          path: dist/skillhub-*.tgz
+
+  exe:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-24.04, name: skillhub-linux-x64 }
+          - { os: ubuntu-24.04-arm, name: skillhub-linux-arm64 }
+          - { os: windows-latest, name: skillhub-windows-x64.exe }
+          - { os: macos-latest, name: skillhub-macos-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:exe
+      - name: Rename
+        shell: bash
+        run: |
+          src=dist/skillhub; [ -f dist/skillhub.exe ] && src=dist/skillhub.exe
+          mkdir -p out && mv "$src" "out/${{ matrix.name }}"
+      - name: Starts and answers /livez
+        shell: bash
+        run: |
+          mkdir -p smoke && cd smoke
+          PORT=18080 BASE_URL=http://localhost:18080 SESSION_SECRET=$(printf '%064d' 0) AUTH_PROVIDERS=email EMAIL_TRANSPORT=log OWNER_EMAILS=ci@example.com \
+            "../out/${{ matrix.name }}" > log.txt 2>&1 &
+          for _ in $(seq 1 30); do curl -fs http://127.0.0.1:18080/livez && exit 0; sleep 2; done
+          cat log.txt; exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: out/${{ matrix.name }}
+
+  release:
+    needs: [test, image, chart, exe]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Assets pinned to this version
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          mkdir -p assets
+          cp artifacts/* assets/
+          for f in standalone bundled external; do
+            sed "s|${IMAGE}:latest|${IMAGE}:${VERSION}|" "deploy/compose/$f.yml" > "assets/compose-$f.yml"
+            sed -i "s|-f $f.yml|-f compose-$f.yml|" "assets/compose-$f.yml"
+          done
+          cp deploy/compose/.env.example assets/compose.env.example
+          for f in main.bicep azuredeploy.json deploy.ps1; do sed "s|${IMAGE}:latest|${IMAGE}:${VERSION}|" "deploy/azure/$f" > "assets/$f"; done
+          cp deploy/exe/skillhub.service assets/
+          cd assets && sha256sum -- * > SHA256SUMS
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          cat > notes.md <<EOF
+          ## Install
+
+          Docker: \`docker run -d -p 8080:8080 -v skillhub-data:/data --env-file .env ${IMAGE}:${VERSION}\`
+
+          Kubernetes: \`helm install skillhub ${CHARTS}/skillhub --version ${VERSION} --set baseUrl=https://skills.example.com ...\`
+
+          Compose: download \`compose-standalone.yml\` (or \`bundled\`, \`external\`) and \`compose.env.example\` (save it as \`.env\`), then \`docker compose -f compose-standalone.yml up -d\`.
+
+          Azure: download \`deploy.ps1\` and \`main.bicep\` into one folder, then \`./deploy.ps1 -ResourceGroup skillhub -OwnerEmails you@example.com\`.
+
+          Without Docker: download the executable for your system. See docs/SELF_HOSTING.md.
+          EOF
+          flags=(--title "SkillHub $VERSION" --notes-file notes.md --generate-notes --verify-tag)
+          if [ "${{ needs.test.outputs.prerelease }}" = "true" ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" "${flags[@]}" assets/*

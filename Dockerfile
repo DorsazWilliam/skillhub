@@ -1,7 +1,8 @@
 # SkillHub on Node: one image for docker run, Compose and Kubernetes (docs/SELF_HOSTING.md).
 # Default: SQLite and uploads on /data. Set DATABASE_URL=postgres://... and STORAGE=s3 for Postgres and a bucket.
 
-FROM node:24-slim AS build
+# The build output is plain JavaScript: build once on the native platform, for every target.
+FROM --platform=$BUILDPLATFORM node:24-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund --ignore-scripts
