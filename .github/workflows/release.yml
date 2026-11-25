@@ -47,6 +47,8 @@ jobs:
   image:
     needs: test
     runs-on: ubuntu-latest
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: false   # no build record artifact for the release job to trip on
     permissions:
       contents: read
       packages: write
@@ -160,6 +162,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: '{skillhub-*,chart}'
           merge-multiple: true
       - name: Assets pinned to this version
         env:
