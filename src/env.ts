@@ -8,6 +8,8 @@ export interface Env {
   RATE_LIMITER?: RateLimit;
   /** Browser Run binding, used by render_prototype. Optional: without it, rendering answers that it is not configured. */
   BROWSER?: Fetcher;
+  /** Node runtime: opens a Puppeteer browser (a Chromium container). Used by render_prototype instead of BROWSER. */
+  LAUNCH_BROWSER?: () => Promise<unknown>;
   OAUTH_PROVIDER: OAuthHelpers;
 
   BASE_URL: string;

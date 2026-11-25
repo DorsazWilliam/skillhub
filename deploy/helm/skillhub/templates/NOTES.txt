@@ -1,0 +1,10 @@
+SkillHub is starting at {{ .Values.baseUrl }}
+
+  Database: {{ .Values.database.type }}{{ if .Values.bundled.postgres.enabled }} (bundled){{ end }}
+  Files:    {{ .Values.storage.type }}{{ if .Values.bundled.s3.enabled }} (bundled){{ end }}
+  Replicas: {{ include "skillhub.replicas" . }}
+
+Next:
+  1. In the Entra app registration, add the redirect URI {{ .Values.baseUrl }}/auth/callback
+  2. Sign in with one of: {{ .Values.ownerEmails | default "(set ownerEmails)" }}
+  3. Connect agents with the MCP URL {{ .Values.baseUrl }}/mcp

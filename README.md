@@ -42,7 +42,7 @@ They connect through canonical `[[area/path]]` links: rules point to skills and 
 - **Setup guide.** Connections opens with per-client steps for Claude, ChatGPT and Copilot Studio and a prompt to try. Dismiss it; the Setup guide button brings it back.
 - **REST, MCP and a typed client from one registry.** Every operation is defined once.
 - **Desktop and phone.** The phone layout follows iOS conventions: tab bar, push navigation, sheets, swipe actions.
-- **Cheap to run.** One Cloudflare Worker with D1, R2 and KV, on the $5 Workers plan.
+- **Cheap to run.** One Cloudflare Worker with D1, R2 and KV, on the $5 Workers plan. Or self-hosted: one Docker image with SQLite or Postgres, files on disk or in any S3-compatible bucket.
 
 <table>
   <tr>
@@ -70,6 +70,10 @@ Not built, and not planned. Things that would fit on top:
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/DorsazWilliam/skillhub)
 
 The button forks the repository and creates the database, bucket and cache for you. You still need the Entra app registration and secrets; `npm run setup` below does all of it from your machine.
+
+### Self-hosted
+
+One Docker image runs anywhere: `docker run`, Docker Compose (alone, with bundled Postgres and S3 storage, or against yours) or Kubernetes with the Helm chart in `deploy/helm`. SQLite on a volume, or Postgres and any S3-compatible bucket. See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
 
 ### From your machine
 
@@ -174,11 +178,11 @@ docs           ENTRA, DEPLOY, CLIENTS, SECURITY, WHITELABEL, DECISIONS
 
 ## Docs
 
-[Entra setup](docs/ENTRA.md) · [Deploy](docs/DEPLOY.md) · [Connect clients](docs/CLIENTS.md) · [Security](docs/SECURITY.md) · [White-label](docs/WHITELABEL.md) · [Decisions](docs/DECISIONS.md)
+[Entra setup](docs/ENTRA.md) · [Deploy](docs/DEPLOY.md) · [Self-hosting](docs/SELF_HOSTING.md) · [Connect clients](docs/CLIENTS.md) · [Security](docs/SECURITY.md) · [White-label](docs/WHITELABEL.md) · [Decisions](docs/DECISIONS.md)
 
 ## Status
 
-Backend complete for SPEC milestones M0 to M6. The React SPA reproduces the approved prototype (`prototype/index.html`) on desktop and phone. 139 unit and integration tests (`npx vitest run`) and a 14-test Playwright smoke suite (`npm run e2e`).
+Backend complete for SPEC milestones M0 to M6. The React SPA reproduces the approved prototype (`prototype/index.html`) on desktop and phone. 139 unit and integration tests, run on Cloudflare (`npm test`), Node + SQLite (`npm run test:node`) and Node + Postgres (`npm run test:pg`), and a 14-test Playwright smoke suite (`npm run e2e`).
 
 ## License
 

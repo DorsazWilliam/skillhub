@@ -1,0 +1,107 @@
+{{- $volume := include "skillhub.needsVolume" . }}
+{{- $s3endpoint := .Values.storage.s3.endpoint }}
+{{- if .Values.bundled.s3.enabled }}{{ $s3endpoint = printf "http://%s-s3:8333" .Release.Name }}{{ end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skillhub.name" . }}
+  labels: {{- include "skillhub.labels" . | nindent 4 }}
+spec:
+  replicas: {{ include "skillhub.replicas" . }}
+  {{- if $volume }}
+  # One writer on the volume: stop the old pod before starting the new one.
+  strategy: { type: Recreate }
+  {{- end }}
+  selector:
+    matchLabels: {{- include "skillhub.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "skillhub.selector" . | nindent 8 }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.litestream.enabled (eq .Values.database.type "sqlite") }}
+      initContainers:
+        - name: litestream-restore
+          image: {{ .Values.litestream.image }}
+          args: ["restore", "-if-db-not-exists", "-if-replica-exists", "-o", "/data/skillhub.db", "{{ .Values.litestream.url }}"]
+          envFrom: [{ secretRef: { name: {{ include "skillhub.secretName" . }} } }]
+          {{- with .Values.litestream.endpoint }}
+          env: [{ name: LITESTREAM_ENDPOINT, value: {{ . | quote }} }]
+          {{- end }}
+          volumeMounts: [{ name: data, mountPath: /data }]
+      {{- end }}
+      containers:
+        - name: skillhub
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports: [{ name: http, containerPort: 8080 }]
+          envFrom: [{ secretRef: { name: {{ include "skillhub.secretName" . }} } }]
+          env:
+            - { name: BASE_URL, value: {{ .Values.baseUrl | quote }} }
+            - { name: ENTRA_TENANT_ID, value: {{ .Values.entra.tenantId | quote }} }
+            - { name: ENTRA_CLIENT_ID, value: {{ .Values.entra.clientId | quote }} }
+            - { name: ENTRA_ALLOWED_TENANTS, value: {{ .Values.entra.allowedTenants | quote }} }
+            - { name: ALLOWED_EMAIL_DOMAINS, value: {{ .Values.allowedEmailDomains | quote }} }
+            - { name: ALLOW_GUESTS, value: {{ .Values.allowGuests | quote }} }
+            - { name: OWNER_EMAILS, value: {{ .Values.ownerEmails | quote }} }
+            - { name: MCP_MAX_SCOPES, value: {{ .Values.mcpMaxScopes | quote }} }
+            {{- if eq .Values.database.type "sqlite" }}
+            - { name: DATABASE_URL, value: "sqlite:/data/skillhub.db" }
+            {{- end }}
+            - { name: DATABASE_POOL, value: {{ .Values.database.poolSize | quote }} }
+            - { name: STORAGE, value: {{ .Values.storage.type | quote }} }
+            {{- if eq .Values.storage.type "disk" }}
+            - { name: STORAGE_DIR, value: "/data/files" }
+            {{- else }}
+            - { name: S3_ENDPOINT, value: {{ $s3endpoint | quote }} }
+            - { name: S3_BUCKET, value: {{ .Values.storage.s3.bucket | quote }} }
+            - { name: S3_REGION, value: {{ .Values.storage.s3.region | quote }} }
+            - { name: S3_FORCE_PATH_STYLE, value: {{ .Values.storage.s3.forcePathStyle | quote }} }
+            - { name: S3_CREATE_BUCKET, value: {{ or .Values.storage.s3.createBucket .Values.bundled.s3.enabled | quote }} }
+            {{- end }}
+            {{- if .Values.browser.enabled }}
+            - { name: BROWSER_URL, value: "http://127.0.0.1:9222" }
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          readinessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 10 }
+          livenessProbe: { httpGet: { path: /livez, port: http }, periodSeconds: 20, failureThreshold: 6 }
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          {{- if $volume }}
+          volumeMounts: [{ name: data, mountPath: /data }]
+          {{- end }}
+        {{- if and .Values.litestream.enabled (eq .Values.database.type "sqlite") }}
+        - name: litestream
+          image: {{ .Values.litestream.image }}
+          args: ["replicate", "/data/skillhub.db", "{{ .Values.litestream.url }}"]
+          envFrom: [{ secretRef: { name: {{ include "skillhub.secretName" . }} } }]
+          {{- with .Values.litestream.endpoint }}
+          env: [{ name: LITESTREAM_ENDPOINT, value: {{ . | quote }} }]
+          {{- end }}
+          volumeMounts: [{ name: data, mountPath: /data }]
+        {{- end }}
+        {{- if .Values.browser.enabled }}
+        - name: chromium
+          image: {{ .Values.browser.image }}
+          # Listens on localhost only: reachable by SkillHub in this pod, not from the cluster.
+          args: ["--remote-debugging-address=127.0.0.1", "--remote-debugging-port=9222"]
+          resources: { requests: { cpu: 100m, memory: 256Mi }, limits: { memory: 1Gi } }
+        {{- end }}
+      {{- if $volume }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" .Release.Name) }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}

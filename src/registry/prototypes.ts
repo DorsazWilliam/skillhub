@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import puppeteer from '@cloudflare/puppeteer';
+import type puppeteerType from '@cloudflare/puppeteer';
 import { one, stmt, type NodeRow } from '../db/d1';
 import { DbTree } from '../db/tree';
 import { AppError, conflict, invalid, notFound } from '../lib/errors';
@@ -243,7 +243,7 @@ export const renderPrototype = defineOp({
   rest: { method: 'POST', path: '/prototypes/{prototype}/render' },
   mcp: { tool: 'render_prototype', readOnly: true },
   handler: async (ctx, input) => {
-    if (!ctx.env.BROWSER) throw invalid('Rendering is not configured on this hub (no Browser Run binding). Open the preview_url from get_prototype instead.');
+    if (!ctx.env.BROWSER && !ctx.env.LAUNCH_BROWSER) throw invalid('Rendering is not configured on this hub (no Browser Run binding). Open the preview_url from get_prototype instead.');
     const proto = await requireProto(ctx);
     const role = await ctx.az.role(proto);
     if (role === 0) throw notFound();
@@ -258,9 +258,12 @@ export const renderPrototype = defineOp({
 
     const consoleLines: z.infer<typeof ConsoleLine>[] = [];
     const errors: string[] = [];
-    let browser: Awaited<ReturnType<typeof puppeteer.launch>>;
+    let browser: Awaited<ReturnType<typeof puppeteerType.launch>>;
     try {
-      browser = await puppeteer.launch(ctx.env.BROWSER);
+      // Cloudflare: Browser Run. Node: a Chromium the runtime connects to (BROWSER_WS_URL). Same Puppeteer API.
+      browser = ctx.env.LAUNCH_BROWSER
+        ? ((await ctx.env.LAUNCH_BROWSER()) as typeof browser)
+        : await (await import('@cloudflare/puppeteer')).default.launch(ctx.env.BROWSER!);
     } catch (e) {
       console.error(JSON.stringify({ level: 'error', op: 'render_prototype', msg: 'browser launch failed', err: e instanceof Error ? e.message.slice(0, 300) : String(e) }));
       throw new AppError('internal', 'Could not start the cloud browser. Try again later, or open the preview_url from get_prototype.');

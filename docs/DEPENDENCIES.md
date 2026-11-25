@@ -27,4 +27,4 @@ Not used: Geist and Inter web fonts (OFL-1.1, and the CSP allows fonts from self
 | @playwright/test | 1.65 | Apache-2.0 | End-to-end smoke suite and README screenshots |
 | @types/react, @types/react-dom, @types/mdast | | MIT | Types |
 
-The Worker's own dependencies (hono, zod, jose, yaml, diff, fflate, the MCP SDK, the OAuth provider, wrangler, vitest) predate this list; all are MIT, ISC or Apache-2.0. `@cloudflare/puppeteer` 2.0 (Apache-2.0) drives Browser Run for `render_prototype`.
+The Worker's own dependencies (hono, zod, jose, yaml, diff, fflate, the MCP SDK, the OAuth provider, wrangler, vitest) predate this list; all are MIT, ISC or Apache-2.0. `@cloudflare/puppeteer` 2.0 (Apache-2.0) drives Browser Run for `render_prototype`. Self-hosting adds `pg` (MIT), `aws4fetch` (MIT), `@hono/node-server` (MIT) and `puppeteer-core` (Apache-2.0), bundled into `dist/server.mjs`, plus `@electric-sql/pglite` (Apache-2.0) and `esbuild` (MIT) for tests and builds.

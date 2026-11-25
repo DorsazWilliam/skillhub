@@ -2,6 +2,7 @@ import { skillMeta, splitFrontmatter } from '../lib/frontmatter';
 import { stripMarkdown } from '../lib/markdown';
 import { SKILL_MD, areaOfPath } from '../lib/areas';
 import { stmt } from './d1';
+import { dialectOf, tsqueryFromFts } from '../node/sql';
 
 /** A SKILL.md inside skills/: its published frontmatter decides whether its folder is a skill. */
 export function isSkillDoc(node: { kind: string; name: string; path: string }): boolean {
@@ -40,4 +41,23 @@ export function ftsQuery(text: string): string | null {
     .slice(0, 12);
   if (tokens.length === 0) return null;
   return tokens.map((t, i) => (i === tokens.length - 1 ? `"${t}"*` : `"${t}"`)).join(' OR ');
+}
+
+/**
+ * A ranked full-text query on skill_fts or doc_fts, for SQLite (FTS5, bm25) or Postgres (tsvector, ts_rank).
+ * Lower score is better on both. `q` comes from ftsQuery. With `snippet`, each row has a short excerpt of the body.
+ */
+export function ftsSearch(db: unknown, table: 'skill_fts' | 'doc_fts', q: string, limit: number, snippet: boolean): { sql: string; params: unknown[] } {
+  const desc = table === 'skill_fts' ? 'description' : "'' AS description";
+  if (dialectOf(db) === 'postgres') {
+    const tq = tsqueryFromFts(q);
+    const snip = snippet ? `, ts_headline('english', body, to_tsquery('english', ?), 'MaxFragments=1, MaxWords=16, MinWords=5, StartSel="", StopSel="", FragmentDelimiter=" ... "') AS snip` : '';
+    return {
+      sql: `SELECT doc_id, name, ${desc}, -ts_rank(tsv, to_tsquery('english', ?)) AS score${snip} FROM ${table} WHERE tsv @@ to_tsquery('english', ?) ORDER BY score LIMIT ?`,
+      params: snippet ? [tq, tq, tq, limit] : [tq, tq, limit],
+    };
+  }
+  const rank = table === 'skill_fts' ? 'bm25(skill_fts, 0, 10.0, 5.0, 1.0)' : 'bm25(doc_fts, 0, 5.0, 1.0)';
+  const snip = snippet ? `, snippet(${table}, ${table === 'skill_fts' ? 3 : 2}, '', '', ' ... ', 16) AS snip` : '';
+  return { sql: `SELECT doc_id, name, ${desc}, ${rank} AS score${snip} FROM ${table} WHERE ${table} MATCH ? ORDER BY score LIMIT ?`, params: [q, limit] };
 }

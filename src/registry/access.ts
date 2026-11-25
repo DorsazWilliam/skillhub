@@ -107,7 +107,7 @@ export const grantAccess = defineOp({
       name = u.name;
       email = u.email;
     } else {
-      const t = await one<{ id: string; name: string }>(ctx.db, 'SELECT id, name FROM teams WHERE id = ? OR name = ? COLLATE NOCASE LIMIT 1', input.principal, input.principal);
+      const t = await one<{ id: string; name: string }>(ctx.db, 'SELECT id, name FROM teams WHERE id = ? OR lower(name) = lower(?) LIMIT 1', input.principal, input.principal);
       if (!t) throw notFound('Team not found');
       principalId = t.id;
       name = t.name;

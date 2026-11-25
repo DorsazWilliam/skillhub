@@ -1,0 +1,14 @@
+node_modules
+.git
+.claude
+.wrangler
+.selfhost
+dist
+web/dist
+demo
+coverage
+test-results
+playwright-report
+e2e/test-results
+*.log
+.dev.vars

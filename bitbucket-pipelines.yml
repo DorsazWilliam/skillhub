@@ -13,6 +13,9 @@ definitions:
           - node scripts/check-parity.mjs
           - npm run build
           - npm test
+          - npm run test:node
+          - npm run test:pg
+          - npm run build:node
 
 pipelines:
   pull-requests:

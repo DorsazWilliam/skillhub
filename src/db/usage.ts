@@ -31,7 +31,7 @@ export function usageStmts(db: D1Database, actorId: string, u: UsageInfo, now: n
       stmt(
         db,
         `INSERT INTO usage_daily (day, node_id, actor_id, loads, shown, last_load_at) VALUES (?,?,?,1,0,?)
-         ON CONFLICT (day, node_id, actor_id) DO UPDATE SET loads = loads + 1, last_load_at = excluded.last_load_at`,
+         ON CONFLICT (day, node_id, actor_id) DO UPDATE SET loads = usage_daily.loads + 1, last_load_at = excluded.last_load_at`,
         day,
         u.load,
         actorId,
@@ -44,7 +44,7 @@ export function usageStmts(db: D1Database, actorId: string, u: UsageInfo, now: n
       stmt(
         db,
         `INSERT INTO usage_daily (day, node_id, actor_id, loads, shown) VALUES (?,?,?,0,1)
-         ON CONFLICT (day, node_id, actor_id) DO UPDATE SET shown = shown + 1`,
+         ON CONFLICT (day, node_id, actor_id) DO UPDATE SET shown = usage_daily.shown + 1`,
         day,
         id,
         actorId,

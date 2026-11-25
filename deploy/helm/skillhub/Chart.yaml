@@ -1,0 +1,9 @@
+apiVersion: v2
+name: skillhub
+description: Store, version and share AI configuration files (rules, skills, documentation, prototypes) with access control. SQLite on a volume, or Postgres and an S3-compatible bucket.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/DorsazWilliam/skillhub
+sources:
+  - https://github.com/DorsazWilliam/skillhub

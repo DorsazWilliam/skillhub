@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { all, type NodeRow } from '../db/d1';
-import { ftsQuery } from '../db/fts';
+import { ftsQuery, ftsSearch } from '../db/fts';
 import type { Authz } from '../authz/authorize';
 import { defineOp } from './types';
 import { NodeOut, canonicalPaths, displayPaths, getNodesByIds, nodeOuts } from './shared';
@@ -28,12 +28,8 @@ export async function findSkills(az: Authz, task: string, limit: number): Promis
   const q = ftsQuery(task);
   let rows: FtsRow[];
   if (q) {
-    rows = await all<FtsRow>(
-      az.db,
-      'SELECT doc_id, name, description, bm25(skill_fts, 0, 10.0, 5.0, 1.0) AS score FROM skill_fts WHERE skill_fts MATCH ? ORDER BY score LIMIT ?',
-      q,
-      limit * 5,
-    );
+    const f = ftsSearch(az.db, 'skill_fts', q, limit * 5, false);
+    rows = await all<FtsRow>(az.db, f.sql, ...f.params);
   } else {
     rows = await all<FtsRow>(az.db, 'SELECT doc_id, name, description, 0 AS score FROM skill_fts ORDER BY name LIMIT ?', limit * 5);
   }
@@ -115,20 +111,10 @@ export const search = defineOp({
       like,
     );
     const q = ftsQuery(input.q);
-    const skillHits = q
-      ? await all<FtsRow>(
-          ctx.db,
-          "SELECT doc_id, name, description, bm25(skill_fts, 0, 10.0, 5.0, 1.0) AS score, snippet(skill_fts, 3, '', '', ' ... ', 16) AS snip FROM skill_fts WHERE skill_fts MATCH ? ORDER BY score LIMIT 100",
-          q,
-        )
-      : [];
-    const docHits = q
-      ? await all<FtsRow>(
-          ctx.db,
-          "SELECT doc_id, name, '' AS description, bm25(doc_fts, 0, 5.0, 1.0) AS score, snippet(doc_fts, 2, '', '', ' ... ', 16) AS snip FROM doc_fts WHERE doc_fts MATCH ? ORDER BY score LIMIT 100",
-          q,
-        )
-      : [];
+    const fs = q ? ftsSearch(ctx.db, 'skill_fts', q, 100, true) : null;
+    const fd = q ? ftsSearch(ctx.db, 'doc_fts', q, 100, true) : null;
+    const skillHits = fs ? await all<FtsRow>(ctx.db, fs.sql, ...fs.params) : [];
+    const docHits = fd ? await all<FtsRow>(ctx.db, fd.sql, ...fd.params) : [];
     // A skill hit is shown as its skill folder.
     const skillDocs = await getNodesByIds(ctx.db, skillHits.map((h) => h.doc_id));
     const skillFolderOf = new Map(skillDocs.filter((d) => d.parent_id && d.deleted_at === null && d.published_version !== null).map((d) => [d.id, d.parent_id!]));

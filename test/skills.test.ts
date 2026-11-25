@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { env } from 'cloudflare:workers';
 import { AREA, enc, makeUser, rootFolder, sessionClient, type Client } from './helpers';
+import { dialectOf } from '../src/node/sql';
 
 const uid = (): string => crypto.randomUUID().slice(0, 8).toLowerCase();
 const skillMd = (name: string, body = '1. Run the checks.\n', description = 'Use when checking a release.'): string =>
@@ -223,7 +224,16 @@ describe('skill folders', () => {
     await save(editor, md, skillMd(name));
     const a = (await editor.call('POST', '/docs', { parent: folder, name: 'a.sh' })).json.node.id;
     await save(editor, a, 'echo a\n');
-    await env.DB.prepare(`CREATE TRIGGER fail_publish_${a} BEFORE UPDATE OF published_version ON nodes WHEN NEW.id = '${a}' BEGIN SELECT RAISE(ABORT, 'boom'); END`).run();
+    // Make publishing file a fail inside the batch (SQLite or Postgres trigger).
+    const pg = dialectOf(env.DB) === 'postgres';
+    if (pg) {
+      await env.DB.exec(
+        `CREATE FUNCTION fail_publish_${a}() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'boom'; END $$;\n` +
+          `CREATE TRIGGER fail_publish_${a} BEFORE UPDATE OF published_version ON nodes FOR EACH ROW WHEN (NEW.id = '${a}') EXECUTE FUNCTION fail_publish_${a}();`,
+      );
+    } else {
+      await env.DB.prepare(`CREATE TRIGGER fail_publish_${a} BEFORE UPDATE OF published_version ON nodes WHEN NEW.id = '${a}' BEGIN SELECT RAISE(ABORT, 'boom'); END`).run();
+    }
     try {
       const r = await owner.call('POST', `/skills/${folder}/publish`, {});
       expect(r.status).toBe(500);
@@ -231,7 +241,8 @@ describe('skill folders', () => {
       expect(rows.results.every((x) => x.published_version === null)).toBe(true);
       expect(await env.DB.prepare('SELECT 1 FROM skill_fts WHERE doc_id = ?').bind(md).first()).toBeNull();
     } finally {
-      await env.DB.prepare(`DROP TRIGGER fail_publish_${a}`).run();
+      if (pg) await env.DB.exec(`DROP TRIGGER fail_publish_${a} ON nodes; DROP FUNCTION fail_publish_${a}();`);
+      else await env.DB.prepare(`DROP TRIGGER fail_publish_${a}`).run();
     }
     expect((await owner.call('POST', `/skills/${folder}/publish`, {})).json.published).toBe(2);
   });

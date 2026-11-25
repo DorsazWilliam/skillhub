@@ -1,0 +1,105 @@
+# SkillHub Helm values. Three common setups (docs/SELF_HOSTING.md):
+#   1. SQLite + volume (default): one replica, nothing else needed.
+#   2. Your Postgres + your S3 bucket: database.type=postgres, storage.type=s3, replicas as you like.
+#   3. Bundled Postgres + S3 store: database.type=postgres + bundled.postgres.enabled, storage.type=s3 + bundled.s3.enabled.
+
+image:
+  repository: ghcr.io/dorsazwilliam/skillhub
+  tag: ""            # defaults to the chart appVersion
+  pullPolicy: IfNotPresent
+
+# Ignored (forced to 1) with SQLite: one writer.
+replicaCount: 1
+
+# Public URL people and agents use. Must match the ingress host. The Entra redirect URI is <baseUrl>/auth/callback.
+baseUrl: https://skills.example.com
+
+entra:
+  tenantId: "00000000-0000-0000-0000-000000000000"
+  clientId: "00000000-0000-0000-0000-000000000000"
+  allowedTenants: ""
+allowedEmailDomains: ""
+allowGuests: false
+ownerEmails: ""
+mcpMaxScopes: read,write,publish,manage
+
+# Secrets: either put them here (the chart creates a Secret) or name an existing Secret with the same keys:
+#   SESSION_SECRET, ENTRA_CLIENT_SECRET, and DATABASE_URL / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY as needed.
+existingSecret: ""
+secrets:
+  sessionSecret: ""          # openssl rand -hex 32
+  entraClientSecret: ""
+
+database:
+  type: sqlite               # sqlite | postgres
+  # postgres: a URL like postgres://user:pass@host:5432/skillhub (or DATABASE_URL in existingSecret)
+  url: ""
+  poolSize: 10
+
+storage:
+  type: disk                 # disk | s3
+  s3:
+    endpoint: ""             # https://s3.eu-west-1.amazonaws.com, http://minio.storage:9000, R2's S3 endpoint...
+    bucket: skillhub
+    region: us-east-1
+    forcePathStyle: true     # false for AWS S3
+    accessKeyId: ""          # or S3_ACCESS_KEY_ID in existingSecret
+    secretAccessKey: ""      # or S3_SECRET_ACCESS_KEY in existingSecret
+    createBucket: false
+
+# The volume for the SQLite file and/or uploads on disk. Not created when neither uses it.
+persistence:
+  size: 5Gi
+  storageClass: ""           # must be block storage (ReadWriteOnce): SQLite is unsafe on NFS or SMB
+  existingClaim: ""
+
+# Continuous SQLite backup to an S3-compatible bucket (https://litestream.io). SQLite only.
+litestream:
+  enabled: false
+  image: litestream/litestream:0.3.13
+  url: ""                    # s3://bucket/skillhub.db (credentials from LITESTREAM_ACCESS_KEY_ID / LITESTREAM_SECRET_ACCESS_KEY in existingSecret)
+  endpoint: ""               # for non-AWS stores
+
+# Screenshots for render_prototype: a headless Chromium next to the app.
+browser:
+  enabled: false
+  image: chromedp/headless-shell:140.0.7339.80
+
+bundled:
+  postgres:
+    enabled: false
+    image: postgres:17-alpine
+    password: ""             # required when enabled
+    size: 10Gi
+    storageClass: ""
+  s3:
+    enabled: false
+    image: chrislusf/seaweedfs:4.55
+    secretKey: ""            # required when enabled
+    size: 20Gi
+    storageClass: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  nodePort: null       # with type NodePort
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # The host is taken from baseUrl.
+  tls: []
+
+resources:
+  requests: { cpu: 100m, memory: 192Mi }
+  limits: { memory: 512Mi }
+
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+nodeSelector: {}
+tolerations: []
+affinity: {}
+extraEnv: []
